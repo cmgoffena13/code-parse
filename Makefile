@@ -22,5 +22,5 @@ test:
 	uv run -- pytest -v -n auto
 
 test-cov:
-	uv run -- pytest --cov=src --cov-report=xml
+	uv run -- pytest --cov=src --cov-report=xml --cov-report=term-missing
 
