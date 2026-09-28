@@ -136,42 +136,6 @@ def test_same_name_symbols_in_two_files_both_survive(tmp_path: Path) -> None:
     assert (
         db.connection.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()["c"] == 2
     )
-    assert db.get_user_version() == 6
-
-
-def test_stale_user_version_forces_full_reindex(tmp_path: Path) -> None:
-    """Indexes below SCHEMA_VERSION reparse even when process(full=False)."""
-    (tmp_path / ".gitignore").write_text("# test fixture\n", encoding="utf-8")
-    (tmp_path / "mod.py").write_text("def helper():\n    return 1\n", encoding="utf-8")
-
-    db1 = CodeDB(tmp_path)
-    CodeProcessor(db1, tmp_path).process(full=True)
-    assert db1.get_user_version() == 6
-    assert (
-        db1.connection.execute(
-            "SELECT qualified_name FROM symbols WHERE kind = 'function'"
-        ).fetchone()["qualified_name"]
-        == "mod.helper"
-    )
-
-    # Simulate a pre-prefix index with an unprefixed QN and an old schema version.
-    db1.connection.execute(
-        "UPDATE symbols SET qualified_name = 'helper' WHERE qualified_name = 'mod.helper'"
-    )
-    db1.connection.commit()
-    db1.set_user_version(1)
-
-    db2 = CodeDB(tmp_path)
-    processor = CodeProcessor(db2, tmp_path)
-    processor.process(full=False)
-    assert processor.files_indexed >= 1
-    assert (
-        db2.connection.execute(
-            "SELECT qualified_name FROM symbols WHERE kind = 'function'"
-        ).fetchone()["qualified_name"]
-        == "mod.helper"
-    )
-    assert db2.get_user_version() == 6
 
 
 def test_cross_file_import_call_joins_after_resolve(tmp_path: Path) -> None:

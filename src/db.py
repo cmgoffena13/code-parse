@@ -12,9 +12,6 @@ TABLE_BATCH_MAP = {
     "symbol_references",
 }
 
-# Bump when indexed symbol identity changes (e.g. Python module-prefixed QNs).
-SCHEMA_VERSION = 6
-
 
 class CodeDB:
     def __init__(self, root: Path):
@@ -29,14 +26,6 @@ class CodeDB:
         schema_path = Path(__file__).resolve().parent / "schema.sql"
         with schema_path.open("r", encoding="utf-8") as f:
             self.connection.executescript(f.read())
-
-    def get_user_version(self) -> int:
-        return int(self.connection.execute("PRAGMA user_version").fetchone()[0])
-
-    def set_user_version(self, version: int) -> None:
-        # PRAGMA user_version cannot be parameterized.
-        self.connection.execute(f"PRAGMA user_version = {int(version)}")
-        self.connection.commit()
 
     def exec_tran(self, query: str, params: tuple) -> None:
         try:

@@ -5,7 +5,7 @@ from pathlib import Path
 import xxhash
 
 from src.assigner import GlobalIDAssigner
-from src.db import SCHEMA_VERSION, TABLE_BATCH_MAP, CodeDB
+from src.db import TABLE_BATCH_MAP, CodeDB
 from src.git_utils import path_spec_for_indexing, relative_path_is_ignored
 from src.parsers.factory import FILE_EXTENSION_MAPPING, ParserFactory
 
@@ -169,8 +169,6 @@ class CodeProcessor:
         self.db.resolve_imports(now, last_incremental)
 
     def process(self, full: bool = False) -> None:
-        if self.db.get_user_version() < SCHEMA_VERSION:
-            full = True
         start_epoch = int(time.time())
         start_time = time.time()
         for directory_path, directory_names, file_names in os.walk(self.root):
@@ -213,8 +211,6 @@ class CodeProcessor:
 
         self.db.set_watermark(self.last_full_parse, self.last_incremental)
         self._bulk_operations(start_epoch, self.last_incremental)
-        if full:
-            self.db.set_user_version(SCHEMA_VERSION)
         # self.db.close()
 
         duration = time_now - start_time
