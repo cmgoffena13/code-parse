@@ -6,18 +6,12 @@ Python codebase indexer exposed as an MCP server via the `cbp` CLI.
 
 1. Get the `cbp` binary (release asset or `make compile` → `dist/cbp`).
 2. Make sure the binary is on your PATH
-3. Run:
-
-```bash
-cbp --install-mcp
-```
+3. Run `cbp --install-mcp`
 
 That registers `cbp mcp` in:
 
-- **Cursor** — `~/.cursor/mcp.json` with `mcp --cwd ${workspaceFolder}` so it indexes whatever project you have open
+- **Cursor** — `~/.cursor/mcp.json` with `mcp --cwd ${workspaceFolder}`, whatever project you have open
 - **Claude Desktop** — `mcp` (uses `CLAUDE_WORKSPACE` / process cwd)
-
-> The command prints the JSON it wrote so you can verify. If a config directory isn't writable, it prints a warning and the entry to paste in manually. If your client does **not** expand `${workspaceFolder}`, replace that arg with an absolute project path instead, e.g. `"args": ["mcp", "--cwd", "/path/to/repo"]`.
 
 4. Reload the client (or refresh MCP) so it picks up the new server.
 
