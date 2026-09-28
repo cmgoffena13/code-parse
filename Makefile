@@ -1,11 +1,11 @@
-.PHONY: install ready format lint type-check test test-cov run
+.PHONY: install ready format lint type-check test test-cov run compile
 
 install:
 	uv sync --all-extras
 	uv run -- prek install
 
 run:
-	uv run -- main.py
+	./cbp
 
 ready: lint format type-check test-cov
 
@@ -24,3 +24,13 @@ test:
 test-cov:
 	uv run -- pytest --cov=src --cov-report=xml --cov-report=term-missing
 
+compile:
+	uv run -- nuitka src/app.py \
+		--lto=yes \
+		--output-filename=cbp \
+		--python-flag=no_warnings \
+		--include-package=src \
+		--include-data-files=pyproject.toml=pyproject.toml \
+		--include-data-files=src/schema.sql=src/schema.sql \
+		--noinclude-data-files=src/tests/* \
+		--output-dir=dist/
