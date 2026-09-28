@@ -63,6 +63,9 @@ def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
     """
     Return symbol metadata, source for the indexed span, and reference subsections
     grouped by ``ref_kind`` (only kinds with at least one row are shown).
+
+    ``qualified_name`` must equal ``symbols.qualified_name`` (module-prefixed for
+    Python). Bare names do not match.
     """
     key = qualified_name.strip()
     if not key:

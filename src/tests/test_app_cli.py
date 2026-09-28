@@ -131,3 +131,19 @@ def test_install_mcp_helper_writes_absolute_command(
     assert entry["command"] == str(cli.resolve())
     out = capsys.readouterr().out
     assert f"Wrote to {cursor}" in out
+
+
+def test_create_skill_writes_skill_md(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["cbp", "--create-skill", "--cwd", str(tmp_path)])
+    assert main() == 0
+    out = capsys.readouterr().out
+    skill_path = tmp_path / ".claude" / "skills" / "codebase-parse" / "SKILL.md"
+    assert skill_path.is_file()
+    assert str(skill_path) in out
+    text = skill_path.read_text(encoding="utf-8")
+    assert "qualified_name" in text
+    assert "get_symbol_context" in text

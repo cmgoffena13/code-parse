@@ -24,6 +24,16 @@ def main() -> int:
             print("Restart the client (or reload MCP) to pick up the change.")
             return 0
         return 1
+    if args.create_skill:
+        from src.mcp.skill import generate_skill
+
+        root = args.cwd.resolve()
+        if not root.is_dir():
+            print(f"Not a directory: {root}", file=sys.stderr)
+            return 1
+        path = generate_skill(root)
+        print(f"Wrote skill → {path}")
+        return 0
 
     cwd = args.cwd.resolve()
     if not cwd.is_dir():

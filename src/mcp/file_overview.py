@@ -72,8 +72,7 @@ def _symbol_branch_lines(
         is_last = index == last_i
         connector = "└─ " if is_last else "├─ "
         loc = _line_span(row["line_start"], row["line_end"])
-        child_name = (row["name"] or "").strip()
-        label = child_name if child_name else (row["qualified_name"] or "").strip()
+        label = (row["qualified_name"] or row["name"] or "").strip()
         lines.append(f"{branch_prefix}{connector}{loc}  {row['kind']}  {label}")
         detail_prefix = branch_prefix + ("    " if is_last else "│   ")
         lines.extend(_format_sig_doc(detail_prefix, row))
@@ -91,8 +90,9 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     Return a readable overview of symbols (tree by ``parent_id``, with ``Sig`` /
     ``Doc`` lines) and imports (source line + statement text) for one file.
 
-    ``file_path`` must match ``files.path`` for the index (POSIX path relative to the
-    index root, e.g. ``pkg/mod.py``).
+    Each symbol line uses ``qualified_name`` so callers can pass it to
+    ``get_symbol_context``. ``file_path`` must match ``files.path`` for the index
+    (POSIX path relative to the index root, e.g. ``pkg/mod.py``).
     """
     file_row = db.connection.execute(
         "SELECT id, path, language, line_count FROM files WHERE path = ?",
@@ -159,7 +159,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
             if root_index > 0:
                 lines_out.append("")
             loc = _line_span(row["line_start"], row["line_end"])
-            root_label = (row["name"] or row["qualified_name"] or "").strip()
+            root_label = (row["qualified_name"] or row["name"] or "").strip()
             lines_out.append(f"{loc}  {row['kind']}  {root_label}")
             lines_out.extend(_format_sig_doc("│   ", row))
             lines_out.extend(_symbol_branch_lines(children_by_parent_id, row["id"], ""))

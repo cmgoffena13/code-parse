@@ -5,7 +5,7 @@ install:
 	uv run -- prek install
 
 run:
-	./cbp
+	uv run -- python main.py
 
 ready: lint format type-check test-cov
 

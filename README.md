@@ -29,7 +29,8 @@ Indexes are stored under `~/.config/codebase-parser/databases/`.
 cbp --version
 cbp --info
 cbp --install-mcp
-cbp --cwd /path/to/repo   # start MCP over stdio for that root
+cbp --create-skill          # write .claude/skills/codebase-parse/SKILL.md
+cbp --cwd /path/to/repo     # start MCP over stdio for that root
 ```
 
 With no flags, `cbp` starts the MCP server over stdio for the current directory.

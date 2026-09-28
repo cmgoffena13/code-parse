@@ -64,8 +64,8 @@ def _sig_doc_lines(detail_prefix: str, sig: str, doc: str) -> list[str]:
 
 def search_symbols(db: CodeDB, query: str, limit: int = 20) -> str:
     """
-    Search indexed symbols via ``symbols_fts``. Returns a tree grouped by file so a
-    caller can pick a ``qualified_name`` for follow-up (e.g. ``get_context``).
+    Search indexed symbols via ``symbols_fts``. Returns a tree grouped by file;
+    each hit shows ``qualified_name`` for follow-up with ``get_symbol_context``.
     """
     stripped = query.strip()
     if not stripped:

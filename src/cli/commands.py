@@ -20,6 +20,11 @@ def build_arg_parser() -> argparse.Namespace:
         help="Register cbp in Cursor and Claude Desktop MCP configs",
     )
     parser.add_argument(
+        "--create-skill",
+        action="store_true",
+        help="Write the Claude Codebase-Parser skill under .claude/skills/",
+    )
+    parser.add_argument(
         "--cwd",
         type=Path,
         default=Path.cwd(),

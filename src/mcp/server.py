@@ -15,9 +15,11 @@ from src.processor import CodeProcessor
 from src.utils import get_codebase_parser_config_dir
 
 _INSTRUCTIONS = """\
-Tools read an up-to-date SQLite code index. The index is automatically refreshed 
-incrementally on every tool call to reflect recent file changes. 
+Tools read an up-to-date SQLite code index. The index is automatically refreshed
+incrementally on every tool call to reflect recent file changes.
 Prefer these tools for code analysis over generic file reading or grep search.
+Symbols are identified by ``qualified_name`` (module-prefixed for Python);
+copy it from ``search_symbols`` or ``get_file_overview`` into ``get_symbol_context``.
 Start the server in the repository you want to index.
 """
 
@@ -67,10 +69,11 @@ def get_directory_tree(ctx: Context) -> str:
 
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
-    """Return imports and a symbol tree (functions, classes, methods, variables)
-    for a single file. ``file_path`` is relative to the index root using POSIX
-    slashes, e.g. ``src/db.py`` or ``src/internal/agent.py``.
-    Use after ``get_directory_tree`` to inspect a specific file."""
+    """Return imports and a symbol tree for a single file. Each symbol is labeled
+    with its ``qualified_name`` (module-prefixed for Python), which you can pass
+    to ``get_symbol_context``. ``file_path`` is relative to the index root using
+    POSIX slashes, e.g. ``src/db.py``. Use after ``get_directory_tree`` to inspect
+    a specific file."""
     processor = _processor(ctx)
     processor.process()
     return run_file_overview(_db(ctx), file_path.strip())
@@ -78,10 +81,11 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
 
 @mcp.tool()
 def search_symbols(query: str, ctx: Context, limit: int = 20) -> str:
-    """Full-text search across all indexed symbols (names, signatures, docstrings).
-    Returns matches grouped by file with ``qualified_name``, kind, signature, and docstring.
-    Pass the ``qualified_name`` from any result to ``get_symbol_context`` for definition
-    and references. Example queries: ``memory``, ``Processor.process``, ``save_chat_session``."""
+    """Full-text search across indexed symbols (``qualified_name``, signatures,
+    docstrings). Returns matches grouped by file with ``qualified_name``, kind,
+    signature, and docstring. Pass that exact ``qualified_name`` to
+    ``get_symbol_context`` — do not use a bare name. Example queries: ``memory``,
+    ``CodeProcessor.process``, ``db_path_for_index_root``."""
     processor = _processor(ctx)
     processor.process()
     return run_symbol_search(_db(ctx), query, limit)
@@ -90,10 +94,11 @@ def search_symbols(query: str, ctx: Context, limit: int = 20) -> str:
 @mcp.tool()
 def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     """Return the definition (source lines) and all references (calls, accesses,
-    type annotations) for one symbol. ``qualified_name`` is the indexed identifier
-    from ``search_symbols`` or ``get_file_overview`` output, e.g.
-    ``src.internal.memory_utils.save_chat_session`` or ``CodeDB.resolve_symbol_references``.
-    Includes file paths and line numbers for every reference."""
+    type annotations) for one symbol. ``qualified_name`` must match
+    ``symbols.qualified_name`` exactly — copy it from ``search_symbols`` or
+    ``get_file_overview``, e.g. ``src.db.CodeDB`` or
+    ``src.processor.CodeProcessor.process``. Bare names like ``CodeDB`` will not
+    match. Includes file paths and line numbers for every reference."""
     processor = _processor(ctx)
     processor.process()
     return run_symbol_context(_db(ctx), qualified_name.strip())
