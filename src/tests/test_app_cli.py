@@ -1,11 +1,20 @@
 import json
 import sys
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 
 from src.app import main
-from src.cli.install_mcp import install_mcp
+from src.cli import install_mcp as install_mcp_mod
+from src.cli.install_mcp import (
+    _load_config,
+    claude_desktop_config_path,
+    cursor_mcp_config_path,
+    install_mcp,
+    merge_mcp_server,
+    resolve_cli_path,
+)
 
 
 def test_version_flag_prints_and_exits_zero(
@@ -43,6 +52,16 @@ def test_cwd_missing_directory_exits_one(
     assert main() == 1
     err = capsys.readouterr().err
     assert "Not a directory" in err
+
+
+def test_main_starts_mcp_stdio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(sys, "argv", ["cbp", "--cwd", str(tmp_path)])
+    fake_mcp = MagicMock()
+    fake_server = MagicMock()
+    fake_server.mcp = fake_mcp
+    monkeypatch.setitem(sys.modules, "src.mcp.server", fake_server)
+    assert main() == 0
+    fake_mcp.run.assert_called_once_with(transport="stdio")
 
 
 def test_install_mcp_merges_into_cursor_and_claude(
@@ -93,6 +112,14 @@ def test_install_mcp_merges_into_cursor_and_claude(
     assert claude_data["mcpServers"]["cbp"]["command"] == str(fake_cli.resolve())
 
 
+def test_install_mcp_cli_exits_one_when_nothing_written(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["cbp", "--install-mcp"])
+    monkeypatch.setattr("src.cli.install_mcp.install_mcp", list)
+    assert main() == 1
+
+
 def test_install_mcp_permission_error_prints_manual_entry(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -133,6 +160,72 @@ def test_install_mcp_helper_writes_absolute_command(
     assert f"Wrote to {cursor}" in out
 
 
+def test_resolve_cli_path_uses_argv_when_not_frozen(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    binary = tmp_path / "cbp"
+    binary.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", [str(binary)])
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    assert resolve_cli_path() == binary.resolve()
+
+
+def test_resolve_cli_path_uses_executable_when_frozen(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    binary = tmp_path / "cbp-frozen"
+    binary.write_text("x", encoding="utf-8")
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.setattr(sys, "executable", str(binary))
+    assert resolve_cli_path() == binary.resolve()
+
+
+def test_cursor_and_claude_config_paths(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    home = tmp_path / "home"
+    monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
+
+    monkeypatch.setattr(install_mcp_mod.sys, "platform", "darwin")
+    assert cursor_mcp_config_path() == home / ".cursor" / "mcp.json"
+    assert "Application Support" in str(claude_desktop_config_path())
+
+    monkeypatch.setattr(install_mcp_mod.sys, "platform", "linux")
+    assert claude_desktop_config_path() == (
+        home / ".config" / "Claude" / "claude_desktop_config.json"
+    )
+
+    monkeypatch.setattr(install_mcp_mod.sys, "platform", "win32")
+    monkeypatch.setenv("APPDATA", str(home / "Roaming"))
+    assert claude_desktop_config_path() == (
+        home / "Roaming" / "Claude" / "claude_desktop_config.json"
+    )
+
+    monkeypatch.delenv("APPDATA", raising=False)
+    assert "AppData" in str(claude_desktop_config_path())
+
+
+def test_load_config_empty_and_invalid(tmp_path: Path) -> None:
+    missing = tmp_path / "missing.json"
+    assert _load_config(missing) == {}
+
+    empty = tmp_path / "empty.json"
+    empty.write_text("   \n", encoding="utf-8")
+    assert _load_config(empty) == {}
+
+    bad = tmp_path / "bad.json"
+    bad.write_text("[1, 2]", encoding="utf-8")
+    with pytest.raises(TypeError, match="not a JSON object"):
+        _load_config(bad)
+
+
+def test_merge_mcp_server_rejects_non_object_servers(tmp_path: Path) -> None:
+    path = tmp_path / "mcp.json"
+    path.write_text(json.dumps({"mcpServers": []}), encoding="utf-8")
+    with pytest.raises(TypeError, match="mcpServers must be an object"):
+        merge_mcp_server(path, {"command": "cbp"})
+
+
 def test_create_skill_writes_skill_md(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
@@ -147,3 +240,14 @@ def test_create_skill_writes_skill_md(
     text = skill_path.read_text(encoding="utf-8")
     assert "qualified_name" in text
     assert "get_symbol_context" in text
+
+
+def test_create_skill_missing_cwd_exits_one(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "gone"
+    monkeypatch.setattr(sys, "argv", ["cbp", "--create-skill", "--cwd", str(missing)])
+    assert main() == 1
+    assert "Not a directory" in capsys.readouterr().err
