@@ -26,7 +26,10 @@ test-cov:
 
 compile:
 	uv run -- nuitka src/app.py \
+		--standalone \
+		--onefile \
 		--lto=yes \
+		--assume-yes-for-downloads \
 		--output-filename=cbp \
 		--python-flag=no_warnings \
 		--include-package=src \
