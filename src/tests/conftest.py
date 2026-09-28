@@ -1,0 +1,100 @@
+import sys
+from collections.abc import Callable
+from pathlib import Path
+
+import pytest
+
+# Ensure repository root is importable (so `import src.*` works)
+REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from src.assigner import GlobalIDAssigner
+from src.db import CodeDB
+from src.parsers.factory import ParserFactory
+
+
+@pytest.fixture(autouse=True)
+def _isolate_codebase_parser_config(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep index DBs under this test's tmp dir (see ``utils.get_codebase_parser_config_dir``)."""
+    monkeypatch.setenv(
+        "CODEBASE_PARSER_CONFIG_DIR",
+        str(tmp_path / "codebase-parser-config"),
+    )
+
+
+@pytest.fixture
+def tmp_db(tmp_path: Path) -> CodeDB:
+    return CodeDB(tmp_path)
+
+
+@pytest.fixture
+def assigner(tmp_db: CodeDB) -> GlobalIDAssigner:
+    return GlobalIDAssigner(tmp_db)
+
+
+@pytest.fixture
+def python_parser(tmp_db: CodeDB, assigner: GlobalIDAssigner):
+    return ParserFactory.get_parser("python", assigner, tmp_db)
+
+
+@pytest.fixture
+def python_fixtures_dir() -> Path:
+    return Path(__file__).resolve().parent / "files_to_parse" / "python"
+
+
+@pytest.fixture
+def fixture_bytes(python_fixtures_dir: Path) -> Callable[[str], bytes]:
+    def _read(name: str) -> bytes:
+        return (python_fixtures_dir / name).read_bytes()
+
+    return _read
+
+
+@pytest.fixture
+def go_parser(tmp_db: CodeDB, assigner: GlobalIDAssigner):
+    return ParserFactory.get_parser("go", assigner, tmp_db)
+
+
+@pytest.fixture
+def go_fixtures_dir() -> Path:
+    return Path(__file__).resolve().parent / "files_to_parse" / "golang"
+
+
+@pytest.fixture
+def go_fixture_bytes(go_fixtures_dir: Path) -> Callable[[str], bytes]:
+    def _read(name: str) -> bytes:
+        return (go_fixtures_dir / name).read_bytes()
+
+    return _read
+
+
+@pytest.fixture
+def javascript_parser(tmp_db: CodeDB, assigner: GlobalIDAssigner):
+    return ParserFactory.get_parser("javascript", assigner, tmp_db)
+
+
+@pytest.fixture
+def typescript_parser(tmp_db: CodeDB, assigner: GlobalIDAssigner):
+    return ParserFactory.get_parser("typescript", assigner, tmp_db)
+
+
+@pytest.fixture
+def tsx_parser(tmp_db: CodeDB, assigner: GlobalIDAssigner):
+    return ParserFactory.get_parser("tsx", assigner, tmp_db)
+
+
+@pytest.fixture
+def javascript_fixtures_dir() -> Path:
+    return Path(__file__).resolve().parent / "files_to_parse" / "javascript"
+
+
+@pytest.fixture
+def javascript_fixture_bytes(javascript_fixtures_dir: Path) -> Callable[[str], bytes]:
+    def _read(name: str) -> bytes:
+        return (javascript_fixtures_dir / name).read_bytes()
+
+    return _read
