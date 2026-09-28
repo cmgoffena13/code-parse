@@ -30,6 +30,7 @@ cbp --version
 cbp --info
 cbp --install-mcp
 cbp --create-skill          # write .claude/skills/codebase-parse/SKILL.md
+cbp --full-reload           # force full reparse of --cwd (default: .)
 cbp --cwd /path/to/repo     # start MCP over stdio for that root
 ```
 

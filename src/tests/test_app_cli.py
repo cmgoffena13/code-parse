@@ -251,3 +251,27 @@ def test_create_skill_missing_cwd_exits_one(
     monkeypatch.setattr(sys, "argv", ["cbp", "--create-skill", "--cwd", str(missing)])
     assert main() == 1
     assert "Not a directory" in capsys.readouterr().err
+
+
+def test_full_reload_reparses_and_exits(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".gitignore").write_text("# fixture\n", encoding="utf-8")
+    (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
+    monkeypatch.setattr(sys, "argv", ["cbp", "--full-reload", "--cwd", str(tmp_path)])
+    assert main() == 0
+    out = capsys.readouterr().out
+    assert "Indexed" in out
+
+
+def test_full_reload_missing_cwd_exits_one(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    missing = tmp_path / "gone"
+    monkeypatch.setattr(sys, "argv", ["cbp", "--full-reload", "--cwd", str(missing)])
+    assert main() == 1
+    assert "Not a directory" in capsys.readouterr().err

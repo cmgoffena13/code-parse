@@ -25,6 +25,11 @@ def build_arg_parser() -> argparse.Namespace:
         help="Write the Claude Codebase-Parser skill under .claude/skills/",
     )
     parser.add_argument(
+        "--full-reload",
+        action="store_true",
+        help="Force a full reparse of the workspace index, then exit",
+    )
+    parser.add_argument(
         "--cwd",
         type=Path,
         default=Path.cwd(),

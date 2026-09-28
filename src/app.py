@@ -34,6 +34,20 @@ def main() -> int:
         path = generate_skill(root)
         print(f"Wrote skill → {path}")
         return 0
+    if args.full_reload:
+        root = args.cwd.resolve()
+        if not root.is_dir():
+            print(f"Not a directory: {root}", file=sys.stderr)
+            return 1
+        from src.db import CodeDB
+        from src.processor import CodeProcessor
+
+        db = CodeDB(root)
+        try:
+            CodeProcessor(db, root).process(full=True)
+        finally:
+            db.close()
+        return 0
 
     cwd = args.cwd.resolve()
     if not cwd.is_dir():
