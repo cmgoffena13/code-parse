@@ -22,3 +22,7 @@ That registers `cbp mcp` in:
 4. Reload the client (or refresh MCP) so it picks up the new server.
 
 Indexes are stored under `~/.config/codebase-parse/indexes/`.
+
+## Claude Skill
+
+Use `cbp --create-skill` to write `.claude/skills/codebase-parse/SKILL.md`. The skill steers Claude to prefer the MCP tools — orient with the tree, search by `qualified_name`, then pull symbol context — instead of reading or grepping the entire codebase.
