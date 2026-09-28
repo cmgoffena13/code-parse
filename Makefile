@@ -22,7 +22,7 @@ test:
 	uv run -- pytest -v -n auto
 
 test-cov:
-	uv run -- pytest --cov=src --cov-report=xml --cov-report=term-missing
+	uv run -- pytest --cov=src --cov-report=term-missing
 
 compile:
 	uv run -- nuitka src/app.py \
