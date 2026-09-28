@@ -41,7 +41,7 @@ Call `get_file_overview` when you need the full picture of a single file — its
 
 
 def generate_skill() -> None:
-    output_path = Path.cwd() / ".claude" / "skills" / "codebase-parser" / "SKILL.md"
+    output_path = Path.cwd() / ".claude" / "skills" / "codebase-parse" / "SKILL.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(_SKILL_INSTRUCTIONS, encoding="utf-8")
 
