@@ -16,6 +16,14 @@ def main() -> int:
     if args.version:
         print(f"cbp Version: {get_version()}")
         return 0
+    if args.install_mcp:
+        from src.cli.install_mcp import install_mcp
+
+        written = install_mcp()
+        if written:
+            print("Restart the client (or reload MCP) to pick up the change.")
+            return 0
+        return 1
 
     cwd = args.cwd.resolve()
     if not cwd.is_dir():

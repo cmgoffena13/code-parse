@@ -15,6 +15,11 @@ def build_arg_parser() -> argparse.Namespace:
         help="Show CLI information",
     )
     parser.add_argument(
+        "--install-mcp",
+        action="store_true",
+        help="Register cbp in Cursor and Claude Desktop MCP configs",
+    )
+    parser.add_argument(
         "--cwd",
         type=Path,
         default=Path.cwd(),
