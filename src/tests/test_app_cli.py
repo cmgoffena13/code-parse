@@ -277,7 +277,7 @@ def test_index_incremental(
     (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
     monkeypatch.setattr(sys, "argv", ["cbp", "index", "--cwd", str(tmp_path)])
     assert main() == 0
-    assert "Indexed" in capsys.readouterr().out
+    assert "Indexed" in capsys.readouterr().err
 
 
 def test_index_full_reload(
@@ -291,7 +291,7 @@ def test_index_full_reload(
         sys, "argv", ["cbp", "index", "--full-reload", "--cwd", str(tmp_path)]
     )
     assert main() == 0
-    assert "Indexed" in capsys.readouterr().out
+    assert "Indexed" in capsys.readouterr().err
 
 
 def test_index_missing_cwd_exits_one(
