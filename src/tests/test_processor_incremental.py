@@ -2,6 +2,7 @@
 
 import sqlite3
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -187,3 +188,25 @@ def test_same_line_duplicate_calls_index_without_integrity_error(
     assert rows[0]["source_line"] == rows[1]["source_line"]
     assert rows[0]["source_column"] != rows[1]["source_column"]
     assert rows[0]["id"] != rows[1]["id"]
+
+
+def test_concurrent_run_query_does_not_raise(tmp_path: Path) -> None:
+    """MCP may run tools in parallel; shared SQLite must be serialized."""
+    _write_nested_fixture(tmp_path)
+    db = CodeDB(tmp_path)
+    processor = CodeProcessor(db, tmp_path)
+    processor.process(full=True)
+
+    def worker() -> int:
+        return processor.run_query(
+            lambda conn: conn.connection.execute(
+                "SELECT COUNT(*) AS c FROM symbols"
+            ).fetchone()["c"]
+        )
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = [pool.submit(worker) for _ in range(8)]
+        results = [f.result() for f in as_completed(futures)]
+
+    assert len(results) == 8
+    assert all(isinstance(n, int) for n in results)

@@ -1,7 +1,10 @@
 import os
 import sys
+import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
+from typing import TypeVar
 
 import xxhash
 
@@ -9,6 +12,8 @@ from src.assigner import GlobalIDAssigner
 from src.db import TABLE_BATCH_MAP, CodeDB
 from src.git_utils import path_spec_for_indexing, relative_path_is_ignored
 from src.parsers.factory import FILE_EXTENSION_MAPPING, ParserFactory
+
+T = TypeVar("T")
 
 
 class CodeProcessor:
@@ -25,6 +30,8 @@ class CodeProcessor:
 
         self.files_skipped: int = 0
         self.files_indexed: int = 0
+        # One SQLite connection + mutable snapshots: serialize index + reads.
+        self._lock = threading.RLock()
 
         self.directories_snapshot = self.db.get_directories_snapshot()
         self.files_snapshot = self.db.get_files_snapshot()
@@ -169,7 +176,26 @@ class CodeProcessor:
         self.db.resolve_symbol_references()
         self.db.resolve_imports(now, last_incremental)
 
+    def _reset_run_state(self) -> None:
+        self.files_skipped = 0
+        self.files_indexed = 0
+        for entry in self.directories_snapshot.values():
+            entry["seen"] = False
+        for entry in self.files_snapshot.values():
+            entry["seen"] = False
+
     def process(self, full: bool = False) -> None:
+        with self._lock:
+            self._process_unlocked(full)
+
+    def run_query(self, fn: Callable[[CodeDB], T], *, full: bool = False) -> T:
+        """Refresh the index then run ``fn`` while holding the processor lock."""
+        with self._lock:
+            self._process_unlocked(full)
+            return fn(self.db)
+
+    def _process_unlocked(self, full: bool = False) -> None:
+        self._reset_run_state()
         start_epoch = int(time.time())
         start_time = time.time()
         for directory_path, directory_names, file_names in os.walk(self.root):
@@ -198,6 +224,14 @@ class CodeProcessor:
 
         self.db.delete_files(self.files_snapshot)
         self.db.delete_directories(self.directories_snapshot)
+        self.directories_snapshot = {
+            path: meta
+            for path, meta in self.directories_snapshot.items()
+            if meta["seen"]
+        }
+        self.files_snapshot = {
+            path: meta for path, meta in self.files_snapshot.items() if meta["seen"]
+        }
 
         self._insert_batch(final=True)
 
@@ -212,7 +246,6 @@ class CodeProcessor:
 
         self.db.set_watermark(self.last_full_parse, self.last_incremental)
         self._bulk_operations(start_epoch, self.last_incremental)
-        # self.db.close()
 
         duration = time_now - start_time
         duration_ms = duration * 1000

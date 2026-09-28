@@ -49,10 +49,6 @@ async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
 mcp = MCPServer("codebase-parser", instructions=_INSTRUCTIONS, lifespan=_lifespan)
 
 
-def _db(ctx: Context) -> CodeDB:
-    return ctx.request_context.lifespan_context["db"]
-
-
 def _processor(ctx: Context) -> CodeProcessor:
     return ctx.request_context.lifespan_context["processor"]
 
@@ -62,9 +58,7 @@ def get_directory_tree(ctx: Context) -> str:
     """Return the full directory/file tree of the indexed codebase with line counts
     and symbol counts per file. Use this at the start of a session to understand project structure
     before drilling into specific files or symbols."""
-    processor = _processor(ctx)
-    processor.process()
-    return run_directory_tree(_db(ctx))
+    return _processor(ctx).run_query(run_directory_tree)
 
 
 @mcp.tool()
@@ -74,9 +68,8 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
     to ``get_symbol_context``. ``file_path`` is relative to the index root using
     POSIX slashes, e.g. ``src/db.py``. Use after ``get_directory_tree`` to inspect
     a specific file."""
-    processor = _processor(ctx)
-    processor.process()
-    return run_file_overview(_db(ctx), file_path.strip())
+    path = file_path.strip()
+    return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
 
 @mcp.tool()
@@ -86,9 +79,7 @@ def search_symbols(query: str, ctx: Context, limit: int = 20) -> str:
     signature, and docstring. Pass that exact ``qualified_name`` to
     ``get_symbol_context`` — do not use a bare name. Example queries: ``memory``,
     ``CodeProcessor.process``, ``db_path_for_index_root``."""
-    processor = _processor(ctx)
-    processor.process()
-    return run_symbol_search(_db(ctx), query, limit)
+    return _processor(ctx).run_query(lambda db: run_symbol_search(db, query, limit))
 
 
 @mcp.tool()
@@ -99,9 +90,8 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     ``get_file_overview``, e.g. ``src.db.CodeDB`` or
     ``src.processor.CodeProcessor.process``. Bare names like ``CodeDB`` will not
     match. Includes file paths and line numbers for every reference."""
-    processor = _processor(ctx)
-    processor.process()
-    return run_symbol_context(_db(ctx), qualified_name.strip())
+    name = qualified_name.strip()
+    return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
 
 
 def main() -> None:
