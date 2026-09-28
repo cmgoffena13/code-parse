@@ -33,6 +33,8 @@ compile:
 		--output-filename=cbp \
 		--python-flag=no_warnings \
 		--include-package=src \
+		--nofollow-import-to=src.tests \
+		--nofollow-import-to=pytest \
 		--include-data-files=pyproject.toml=pyproject.toml \
 		--include-data-files=src/schema.sql=src/schema.sql \
 		--noinclude-data-files=src/tests/* \
