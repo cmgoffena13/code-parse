@@ -94,9 +94,9 @@ def install_mcp(
     """
     Register ``cbp`` in Cursor (global) and Claude Desktop configs.
 
-    Cursor gets ``--cwd ${workspaceFolder}`` so one install follows the open
-    project (Cursor expands the variable). Claude Desktop relies on
-    ``CLAUDE_WORKSPACE`` / process cwd.
+    Cursor gets ``mcp --cwd ${workspaceFolder}`` so one install follows the open
+    project (Cursor expands the variable). Claude Desktop gets ``mcp`` and relies
+    on ``CLAUDE_WORKSPACE`` / process cwd.
     """
     cli = (cli_path or resolve_cli_path()).resolve()
     written: list[Path] = []
@@ -105,7 +105,7 @@ def install_mcp(
     cursor_entry = {
         "type": "stdio",
         "command": str(cli),
-        "args": ["--cwd", CURSOR_WORKSPACE_ARG],
+        "args": ["mcp", "--cwd", CURSOR_WORKSPACE_ARG],
     }
     if merge_mcp_server(cursor_path, cursor_entry):
         written.append(cursor_path)
@@ -113,6 +113,7 @@ def install_mcp(
     claude_path = claude_config or claude_desktop_config_path()
     claude_entry = {
         "command": str(cli),
+        "args": ["mcp"],
     }
     if merge_mcp_server(claude_path, claude_entry):
         written.append(claude_path)

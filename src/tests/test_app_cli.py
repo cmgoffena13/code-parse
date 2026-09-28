@@ -17,6 +17,17 @@ from src.cli.install_mcp import (
 )
 
 
+def test_bare_cbp_prints_help(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.setattr(sys, "argv", ["cbp"])
+    assert main() == 0
+    out = capsys.readouterr().out
+    assert "usage:" in out
+    assert "mcp" in out
+    assert "index" in out
+
+
 def test_version_flag_prints_and_exits_zero(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -42,20 +53,20 @@ def test_info_flag_prints_paths_and_exits_zero(
     assert str(config_dir) in out
 
 
-def test_cwd_missing_directory_exits_one(
+def test_mcp_missing_directory_exits_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "no-such-dir"
-    monkeypatch.setattr(sys, "argv", ["cbp", "--cwd", str(missing)])
+    monkeypatch.setattr(sys, "argv", ["cbp", "mcp", "--cwd", str(missing)])
     assert main() == 1
     err = capsys.readouterr().err
     assert "Not a directory" in err
 
 
 def test_main_starts_mcp_stdio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp", "--cwd", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["cbp", "mcp", "--cwd", str(tmp_path)])
     fake_mcp = MagicMock()
     fake_server = MagicMock()
     fake_server.mcp = fake_mcp
@@ -105,11 +116,14 @@ def test_install_mcp_merges_into_cursor_and_claude(
     assert cursor_data["mcpServers"]["cbp"] == {
         "type": "stdio",
         "command": str(fake_cli.resolve()),
-        "args": ["--cwd", "${workspaceFolder}"],
+        "args": ["mcp", "--cwd", "${workspaceFolder}"],
     }
 
     claude_data = json.loads(claude.read_text(encoding="utf-8"))
-    assert claude_data["mcpServers"]["cbp"]["command"] == str(fake_cli.resolve())
+    assert claude_data["mcpServers"]["cbp"] == {
+        "command": str(fake_cli.resolve()),
+        "args": ["mcp"],
+    }
 
 
 def test_install_mcp_cli_exits_one_when_nothing_written(
@@ -156,6 +170,7 @@ def test_install_mcp_helper_writes_absolute_command(
     assert written == [cursor, claude]
     entry = json.loads(cursor.read_text(encoding="utf-8"))["mcpServers"]["cbp"]
     assert entry["command"] == str(cli.resolve())
+    assert entry["args"] == ["mcp", "--cwd", "${workspaceFolder}"]
     out = capsys.readouterr().out
     assert f"Wrote to {cursor}" in out
 
@@ -253,25 +268,38 @@ def test_create_skill_missing_cwd_exits_one(
     assert "Not a directory" in capsys.readouterr().err
 
 
-def test_full_reload_reparses_and_exits(
+def test_index_incremental(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     (tmp_path / ".gitignore").write_text("# fixture\n", encoding="utf-8")
     (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
-    monkeypatch.setattr(sys, "argv", ["cbp", "--full-reload", "--cwd", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["cbp", "index", "--cwd", str(tmp_path)])
     assert main() == 0
-    out = capsys.readouterr().out
-    assert "Indexed" in out
+    assert "Indexed" in capsys.readouterr().out
 
 
-def test_full_reload_missing_cwd_exits_one(
+def test_index_full_reload(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    (tmp_path / ".gitignore").write_text("# fixture\n", encoding="utf-8")
+    (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
+    monkeypatch.setattr(
+        sys, "argv", ["cbp", "index", "--full-reload", "--cwd", str(tmp_path)]
+    )
+    assert main() == 0
+    assert "Indexed" in capsys.readouterr().out
+
+
+def test_index_missing_cwd_exits_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "gone"
-    monkeypatch.setattr(sys, "argv", ["cbp", "--full-reload", "--cwd", str(missing)])
+    monkeypatch.setattr(sys, "argv", ["cbp", "index", "--cwd", str(missing)])
     assert main() == 1
     assert "Not a directory" in capsys.readouterr().err

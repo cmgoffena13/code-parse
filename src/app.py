@@ -2,8 +2,36 @@ import os
 import sys
 from pathlib import Path
 
-from src.cli.commands import build_arg_parser
+from src.cli.commands import build_arg_parser, make_parser
 from src.utils import get_codebase_parser_config_dir, get_version
+
+
+def _require_dir(path: Path) -> Path | None:
+    resolved = path.resolve()
+    if not resolved.is_dir():
+        print(f"Not a directory: {resolved}", file=sys.stderr)
+        return None
+    return resolved
+
+
+def _run_index(root: Path, *, full: bool) -> int:
+    from src.db import CodeDB
+    from src.processor import CodeProcessor
+
+    db = CodeDB(root)
+    try:
+        CodeProcessor(db, root).process(full=full)
+    finally:
+        db.close()
+    return 0
+
+
+def _run_mcp(root: Path) -> int:
+    os.chdir(root)
+    from src.mcp.server import mcp
+
+    mcp.run(transport="stdio")
+    return 0
 
 
 def main() -> int:
@@ -27,37 +55,24 @@ def main() -> int:
     if args.create_skill:
         from src.mcp.skill import generate_skill
 
-        root = args.cwd.resolve()
-        if not root.is_dir():
-            print(f"Not a directory: {root}", file=sys.stderr)
+        root = _require_dir(args.cwd)
+        if root is None:
             return 1
         path = generate_skill(root)
         print(f"Wrote skill → {path}")
         return 0
-    if args.full_reload:
-        root = args.cwd.resolve()
-        if not root.is_dir():
-            print(f"Not a directory: {root}", file=sys.stderr)
+    if args.command == "index":
+        root = _require_dir(args.cwd)
+        if root is None:
             return 1
-        from src.db import CodeDB
-        from src.processor import CodeProcessor
+        return _run_index(root, full=args.full_reload)
+    if args.command == "mcp":
+        root = _require_dir(args.cwd)
+        if root is None:
+            return 1
+        return _run_mcp(root)
 
-        db = CodeDB(root)
-        try:
-            CodeProcessor(db, root).process(full=True)
-        finally:
-            db.close()
-        return 0
-
-    cwd = args.cwd.resolve()
-    if not cwd.is_dir():
-        print(f"Not a directory: {cwd}", file=sys.stderr)
-        return 1
-    os.chdir(cwd)
-
-    from src.mcp.server import mcp
-
-    mcp.run(transport="stdio")
+    make_parser().print_help()
     return 0
 
 
