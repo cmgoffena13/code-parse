@@ -41,7 +41,7 @@ jobs:
       - name: Build with Nuitka (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
-          uv run -- nuitka \
+          uv run --no-dev -- nuitka \
             --standalone \
             --onefile \
             --lto=yes \
@@ -60,7 +60,7 @@ jobs:
       - name: Build with Nuitka (macOS)
         if: matrix.os == 'macos-latest'
         run: |
-          uv run -- nuitka \
+          uv run --no-dev -- nuitka \
             --standalone \
             --onefile \
             --lto=yes \
@@ -80,7 +80,7 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: cmd
         run: |
-          uv run -- nuitka ^
+          uv run --no-dev -- nuitka ^
             --standalone ^
             --onefile ^
             --lto=yes ^

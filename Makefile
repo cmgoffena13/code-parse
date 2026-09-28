@@ -25,7 +25,7 @@ test-cov:
 	uv run -- pytest --cov=src --cov-report=term-missing
 
 compile:
-	uv run -- nuitka src/app.py \
+	uv run --no-dev -- nuitka src/app.py \
 		--standalone \
 		--onefile \
 		--lto=yes \
