@@ -1,4 +1,5 @@
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -7,7 +8,10 @@ from src.utils import get_version
 
 
 def test_get_version_reads_pyproject() -> None:
-    assert get_version() == "0.1.0"
+    pyproject = Path(__file__).resolve().parents[2] / "pyproject.toml"
+    with pyproject.open("rb") as f:
+        expected = tomllib.load(f)["project"]["version"]
+    assert get_version() == expected
 
 
 def test_get_version_frozen_with_meipass(

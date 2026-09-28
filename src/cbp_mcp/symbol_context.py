@@ -1,7 +1,7 @@
 from collections import defaultdict
 
+from src.cbp_mcp.clip import clip
 from src.db import CodeDB
-from src.mcp.clip import clip
 
 _MAX_REFERENCE_CONTEXT = 150
 _REFERENCE_FETCH_LIMIT = 50

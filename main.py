@@ -4,11 +4,11 @@ Test Run the Parser.
 
 from pathlib import Path
 
+from src.cbp_mcp.directory_tree import get_directory_tree
+from src.cbp_mcp.file_overview import get_file_overview
+from src.cbp_mcp.search_symbols import search_symbols
+from src.cbp_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
-from src.mcp.directory_tree import get_directory_tree
-from src.mcp.file_overview import get_file_overview
-from src.mcp.search_symbols import search_symbols
-from src.mcp.symbol_context import get_symbol_context
 from src.processor import CodeProcessor
 
 PROJECT_ROOT = Path(__file__).resolve().parent

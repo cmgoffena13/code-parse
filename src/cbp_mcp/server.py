@@ -6,11 +6,11 @@ from typing import Any
 
 from mcp.server.mcpserver import Context, MCPServer
 
+from src.cbp_mcp.directory_tree import get_directory_tree as run_directory_tree
+from src.cbp_mcp.file_overview import get_file_overview as run_file_overview
+from src.cbp_mcp.search_symbols import search_symbols as run_symbol_search
+from src.cbp_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
-from src.mcp.directory_tree import get_directory_tree as run_directory_tree
-from src.mcp.file_overview import get_file_overview as run_file_overview
-from src.mcp.search_symbols import search_symbols as run_symbol_search
-from src.mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.processor import CodeProcessor
 from src.utils import get_codebase_parse_config_dir
 

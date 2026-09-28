@@ -15,6 +15,7 @@ from src.cli.install_mcp import (
     merge_mcp_server,
     resolve_cli_path,
 )
+from src.utils import get_version
 
 
 def test_bare_cbp_prints_help(
@@ -35,7 +36,7 @@ def test_version_flag_prints_and_exits_zero(
     assert main() == 0
     out = capsys.readouterr().out
     assert "cbp Version:" in out
-    assert "0.1.0" in out
+    assert get_version() in out
 
 
 def test_info_flag_prints_paths_and_exits_zero(
@@ -70,7 +71,7 @@ def test_main_starts_mcp_stdio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) 
     fake_mcp = MagicMock()
     fake_server = MagicMock()
     fake_server.mcp = fake_mcp
-    monkeypatch.setitem(sys.modules, "src.mcp.server", fake_server)
+    monkeypatch.setitem(sys.modules, "src.cbp_mcp.server", fake_server)
     assert main() == 0
     fake_mcp.run.assert_called_once_with(transport="stdio")
 

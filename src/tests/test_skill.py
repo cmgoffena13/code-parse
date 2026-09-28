@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from src.mcp.skill import generate_skill
+from src.cbp_mcp.skill import generate_skill
 
 
 def test_generate_skill_defaults_to_cwd(
@@ -28,6 +28,6 @@ def test_skill_module_main_prints_path(
     tmp_path: Path,
 ) -> None:
     monkeypatch.chdir(tmp_path)
-    runpy.run_module("src.mcp.skill", run_name="__main__")
+    runpy.run_module("src.cbp_mcp.skill", run_name="__main__")
     out = capsys.readouterr().out
     assert "SKILL.md" in out

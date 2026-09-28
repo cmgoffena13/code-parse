@@ -28,7 +28,7 @@ def _run_index(root: Path, *, full: bool) -> int:
 
 def _run_mcp(root: Path) -> int:
     os.chdir(root)
-    from src.mcp.server import mcp
+    from src.cbp_mcp.server import mcp
 
     mcp.run(transport="stdio")
     return 0
@@ -53,7 +53,7 @@ def main() -> int:
             return 0
         return 1
     if args.create_skill:
-        from src.mcp.skill import generate_skill
+        from src.cbp_mcp.skill import generate_skill
 
         root = _require_dir(args.cwd)
         if root is None:
