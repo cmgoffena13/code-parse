@@ -4,6 +4,9 @@ install:
 	uv sync --all-extras
 	uv run -- prek install
 
+run:
+	uv run -- main.py
+
 ready: lint format type-check test-cov
 
 format:

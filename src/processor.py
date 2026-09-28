@@ -63,17 +63,6 @@ class CodeProcessor:
         if language == "python":
             posix = posix.replace("/", ".")
             posix = posix.removesuffix(".__init__")
-        elif language in ("javascript", "typescript", "tsx"):
-            posix = posix.replace("/", ".")
-            # Directory index files are the module for their parent folder
-            # (components/button/index.tsx → components.button). Repo-root
-            # index stays "index" so the module id is never empty.
-            if (
-                path.stem.lower() == "index"
-                and path.parent != Path()
-                and posix.endswith(".index")
-            ):
-                posix = posix[: -len(".index")]
         return posix
 
     def _process_file(self, file_name: str, directory_path: Path, full: bool) -> None:
@@ -142,14 +131,10 @@ class CodeProcessor:
             )
             module_qn = (
                 self._normalize_path(file_relative_path, language=lang)
-                if lang in ("python", "javascript", "typescript", "tsx")
+                if lang == "python"
                 else ""
             )
-            is_package = (lang == "python" and file_name == "__init__.py") or (
-                lang in ("javascript", "typescript", "tsx")
-                and Path(file_name).stem.lower() == "index"
-                and file_relative_path.parent != Path()
-            )
+            is_package = lang == "python" and file_name == "__init__.py"
             symbols, imports, references = parser.parse(
                 file_id, file_bytes, module_qn=module_qn, is_package=is_package
             )
