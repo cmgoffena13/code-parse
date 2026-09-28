@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any
 
-from mcp.server.fastmcp import Context, FastMCP
+from mcp.server.mcpserver import Context, MCPServer
 
 from src.db import CodeDB
 from src.mcp.directory_tree import get_directory_tree as run_directory_tree
@@ -32,7 +32,7 @@ def index_root() -> Path:
 
 
 @asynccontextmanager
-async def _lifespan(_app: FastMCP) -> AsyncIterator[dict[str, Any]]:
+async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
     get_codebase_parser_config_dir()
     root = index_root()
     db = CodeDB(root)
@@ -44,7 +44,7 @@ async def _lifespan(_app: FastMCP) -> AsyncIterator[dict[str, Any]]:
         db.close()
 
 
-mcp = FastMCP("codebase-parser", instructions=_INSTRUCTIONS, lifespan=_lifespan)
+mcp = MCPServer("codebase-parser", instructions=_INSTRUCTIONS, lifespan=_lifespan)
 
 
 def _db(ctx: Context) -> CodeDB:

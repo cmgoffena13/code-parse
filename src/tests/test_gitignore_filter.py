@@ -94,6 +94,7 @@ def test_git_check_ignore_parity_glob(tmp_path: Path) -> None:
         cwd=tmp_path,
         capture_output=True,
         text=True,
+        check=False,
     )
     if init.returncode != 0:
         pytest.skip(f"git init failed: {init.stderr or init.stdout}")
@@ -101,11 +102,13 @@ def test_git_check_ignore_parity_glob(tmp_path: Path) -> None:
         ["git", "check-ignore", "-q", "a.tmp"],
         cwd=tmp_path,
         capture_output=True,
+        check=False,
     )
     r_ok = subprocess.run(
         ["git", "check-ignore", "-q", "keep.py"],
         cwd=tmp_path,
         capture_output=True,
+        check=False,
     )
     assert r_ignored.returncode == 0
     assert r_ok.returncode != 0

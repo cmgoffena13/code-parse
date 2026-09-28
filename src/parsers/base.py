@@ -1,4 +1,3 @@
-
 from tree_sitter import Parser
 
 from src.assigner import GlobalIDAssigner

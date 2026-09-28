@@ -42,9 +42,9 @@ class CodeDB:
         try:
             self.connection.execute(query, params)
             self.connection.commit()
-        except sqlite3.Error as e:
+        except sqlite3.Error:
             self.connection.rollback()
-            raise e
+            raise
 
     def delete_ids(self, table: str, ids: list[int]) -> None:
         if not ids:
@@ -65,9 +65,7 @@ class CodeDB:
         ).fetchone()
         return row["last_full_parse"], row["last_incremental"]
 
-    def set_watermark(
-        self, last_full_parse: int | None, last_incremental: int
-    ) -> None:
+    def set_watermark(self, last_full_parse: int | None, last_incremental: int) -> None:
         if last_full_parse is not None:
             query = "UPDATE watermarks SET last_full_parse = ?, last_incremental = ? WHERE id = 1"
             params = (last_full_parse, last_incremental)

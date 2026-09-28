@@ -494,7 +494,7 @@ class PythonParser(ParserBase):
             symbol_leaf = name = decoded
         elif target.type == "attribute" and target.text is not None:
             text = target.text.decode("utf-8")
-            if text.startswith("self.") or text.startswith("cls."):
+            if text.startswith(("self.", "cls.")):
                 symbol_leaf = text.split(".", 1)[1]
                 name = text
         if not symbol_leaf:
@@ -665,7 +665,7 @@ class PythonParser(ParserBase):
                     raw = str_node.text.decode("utf-8", errors="replace")
                     try:
                         docstring = ast.literal_eval(raw)
-                    except Exception:
+                    except (ValueError, SyntaxError):
                         docstring = raw.strip("\"'")
                     break
 
@@ -926,7 +926,7 @@ class PythonParser(ParserBase):
         # Resolved qualified_name for self./cls. when parent class is on the stack.
         resolved_qualified = None
         used_ctor_param_type = False
-        if target_name.startswith("self.") or target_name.startswith("cls."):
+        if target_name.startswith(("self.", "cls.")):
             suffix = target_name.split(".", 1)[1]
             first_seg, _, rest_after_first = suffix.partition(".")
             for entry in reversed(self.stack):
