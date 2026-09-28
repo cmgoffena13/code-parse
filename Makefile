@@ -1,4 +1,4 @@
-.PHONY: install ready format lint type-check test test-cov
+.PHONY: install ready format lint type-check test test-cov run
 
 install:
 	uv sync --all-extras
@@ -22,5 +22,5 @@ test:
 	uv run -- pytest -v -n auto
 
 test-cov:
-	uv run -- pytest --cov=src --cov-report=html
+	uv run -- pytest --cov=src --cov-report=xml
 
