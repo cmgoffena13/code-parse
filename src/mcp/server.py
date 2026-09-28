@@ -12,7 +12,7 @@ from src.mcp.file_overview import get_file_overview as run_file_overview
 from src.mcp.search_symbols import search_symbols as run_symbol_search
 from src.mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.processor import CodeProcessor
-from src.utils import get_codebase_parser_config_dir
+from src.utils import get_codebase_parse_config_dir
 
 _INSTRUCTIONS = """\
 Tools read an up-to-date SQLite code index. The index is automatically refreshed
@@ -35,7 +35,7 @@ def index_root() -> Path:
 
 @asynccontextmanager
 async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
-    get_codebase_parser_config_dir()
+    get_codebase_parse_config_dir()
     root = index_root()
     db = CodeDB(root)
     processor = CodeProcessor(db, root)

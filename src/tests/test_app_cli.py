@@ -43,8 +43,8 @@ def test_info_flag_prints_paths_and_exits_zero(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    config_dir = tmp_path / "codebase-parser-config"
-    monkeypatch.setenv("CODEBASE_PARSER_CONFIG_DIR", str(config_dir))
+    config_dir = tmp_path / "codebase-parse-config"
+    monkeypatch.setenv("CODEBASE_PARSE_CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(sys, "argv", ["cbp", "--info"])
     assert main() == 0
     out = capsys.readouterr().out

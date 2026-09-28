@@ -21,4 +21,4 @@ That registers `cbp mcp` in:
 
 4. Reload the client (or refresh MCP) so it picks up the new server.
 
-Indexes are stored under `~/.config/codebase-parser/databases/`.
+Indexes are stored under `~/.config/codebase-parse/indexes/`.

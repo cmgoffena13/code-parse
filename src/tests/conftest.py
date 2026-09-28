@@ -19,10 +19,10 @@ def _isolate_codebase_parser_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Keep index DBs under this test's tmp dir (see ``utils.get_codebase_parser_config_dir``)."""
+    """Keep index DBs under this test's tmp dir (see ``utils.get_codebase_parse_config_dir``)."""
     monkeypatch.setenv(
-        "CODEBASE_PARSER_CONFIG_DIR",
-        str(tmp_path / "codebase-parser-config"),
+        "CODEBASE_PARSE_CONFIG_DIR",
+        str(tmp_path / "codebase-parse-config"),
     )
 
 
