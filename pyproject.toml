@@ -7,7 +7,7 @@ dependencies = [
     "mcp>=2.2.0",
     "nuitka[onefile]>=4.0.8",
     "pathspec>=1.1.1",
-    "tree-sitter",
+    "tree-sitter>=0.26.0",
     "tree-sitter-python>=0.25.0",
     "xxhash>=4.0.1",
 ]
