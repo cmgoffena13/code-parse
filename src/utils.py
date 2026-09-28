@@ -31,17 +31,17 @@ def ensure_dir(path: Path) -> Path:
     return path
 
 
-def get_codebase_parse_config_dir(*parts: str) -> Path:
+def get_code_parse_config_dir(*parts: str) -> Path:
     """
-    Base directory for codebase-parse local config/data.
+    Base directory for code-parse local config/data.
 
-    Uses ``$CODEBASE_PARSE_CONFIG_DIR`` when set (e.g. tests); otherwise
-    ``~/.config/codebase-parse``.
+    Uses ``$CODE_PARSE_CONFIG_DIR`` when set (e.g. tests); otherwise
+    ``~/.config/code-parse``.
 
     If ``parts`` are provided, returns ``<base>/<parts...>`` and creates it.
     """
-    override = os.environ.get("CODEBASE_PARSE_CONFIG_DIR")
-    base = Path(override) if override else Path.home() / ".config" / "codebase-parse"
+    override = os.environ.get("CODE_PARSE_CONFIG_DIR")
+    base = Path(override) if override else Path.home() / ".config" / "code-parse"
     return ensure_dir(base.joinpath(*parts))
 
 
@@ -49,4 +49,4 @@ def db_path_for_index_root(index_root: Path) -> Path:
     """SQLite path for an indexed tree: ``<config>/indexes/<sha256(root)>.db``."""
     key = str(index_root.resolve()).encode()
     digest = hashlib.sha256(key).hexdigest()
-    return get_codebase_parse_config_dir("indexes") / f"{digest}.db"
+    return get_code_parse_config_dir("indexes") / f"{digest}.db"

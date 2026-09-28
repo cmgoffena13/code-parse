@@ -1,7 +1,7 @@
 import sqlite3
 from collections import OrderedDict
 
-from src.cbp_mcp.clip import clipped_doc_lines
+from src.codeparse_mcp.clip import clipped_doc_lines
 from src.db import CodeDB
 
 _SYMBOL_SEARCH_SQL = """

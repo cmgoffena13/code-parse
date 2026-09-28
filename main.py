@@ -4,10 +4,10 @@ Test Run the Parser.
 
 from pathlib import Path
 
-from src.cbp_mcp.directory_tree import get_directory_tree
-from src.cbp_mcp.file_overview import get_file_overview
-from src.cbp_mcp.search_symbols import search_symbols
-from src.cbp_mcp.symbol_context import get_symbol_context
+from src.codeparse_mcp.directory_tree import get_directory_tree
+from src.codeparse_mcp.file_overview import get_file_overview
+from src.codeparse_mcp.search_symbols import search_symbols
+from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
 from src.processor import CodeProcessor
 

@@ -1,5 +1,5 @@
 [project]
-name = "codebase-parse"
+name = "code-parse"
 version = "0.1.6"
 readme = "README.md"
 requires-python = ">=3.12"

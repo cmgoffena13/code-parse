@@ -1,4 +1,4 @@
-"""Install cbp as an MCP server in known client configs."""
+"""Install codeparse as an MCP server in known client configs."""
 
 import json
 import os
@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-SERVER_KEY = "cbp"
+SERVER_KEY = "codeparse"
 
 # Cursor expands this at runtime to the open project root. Kept as a literal
 # JSON string (no extra brace escaping) — ``json.dumps`` writes it unchanged.
@@ -14,7 +14,7 @@ CURSOR_WORKSPACE_ARG = "${workspaceFolder}"
 
 
 def resolve_cli_path() -> Path:
-    """Absolute path to the running ``cbp`` binary."""
+    """Absolute path to the running ``codeparse`` binary."""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve()
     return Path(sys.argv[0]).resolve()
@@ -92,7 +92,7 @@ def install_mcp(
     claude_config: Path | None = None,
 ) -> list[Path]:
     """
-    Register ``cbp`` in Cursor (global) and Claude Desktop configs.
+    Register ``codeparse`` in Cursor (global) and Claude Desktop configs.
 
     Cursor gets ``mcp --cwd ${workspaceFolder}`` so one install follows the open
     project (Cursor expands the variable). Claude Desktop gets ``mcp`` and relies

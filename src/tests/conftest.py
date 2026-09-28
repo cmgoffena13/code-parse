@@ -15,14 +15,14 @@ from src.parsers.factory import ParserFactory
 
 
 @pytest.fixture(autouse=True)
-def _isolate_codebase_parser_config(
+def _isolate_code_parse_config(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """Keep index DBs under this test's tmp dir (see ``utils.get_codebase_parse_config_dir``)."""
+    """Keep index DBs under this test's tmp dir (see ``utils.get_code_parse_config_dir``)."""
     monkeypatch.setenv(
-        "CODEBASE_PARSE_CONFIG_DIR",
-        str(tmp_path / "codebase-parse-config"),
+        "CODE_PARSE_CONFIG_DIR",
+        str(tmp_path / "code-parse-config"),
     )
 
 

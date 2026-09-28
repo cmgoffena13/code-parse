@@ -2,8 +2,8 @@ from pathlib import Path
 
 _SKILL_INSTRUCTIONS = """\
 ---
-name: Codebase-Parser
-description: Use the Codebase-Parser MCP Server effectively.
+name: Code-Parse
+description: Use the Code-Parse MCP Server effectively.
 allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context
 ---
 
@@ -55,7 +55,7 @@ node shows `qualified_name`). Useful when:
 
 def generate_skill(root: Path | None = None) -> Path:
     base = (root or Path.cwd()).resolve()
-    output_path = base / ".claude" / "skills" / "codebase-parse" / "SKILL.md"
+    output_path = base / ".claude" / "skills" / "code-parse" / "SKILL.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(_SKILL_INSTRUCTIONS, encoding="utf-8")
     return output_path

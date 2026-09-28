@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 def make_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="cbp", description="cbp")
+    parser = argparse.ArgumentParser(prog="codeparse", description="codeparse")
     parser.add_argument(
         "--version",
         action="store_true",
@@ -17,12 +17,12 @@ def make_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--install-mcp",
         action="store_true",
-        help="Register cbp in Cursor and Claude Desktop MCP configs",
+        help="Register codeparse in Cursor and Claude Desktop MCP configs",
     )
     parser.add_argument(
         "--create-skill",
         action="store_true",
-        help="Write the Claude Codebase-Parser skill under .claude/skills/",
+        help="Write the Claude Code-Parse skill under .claude/skills/",
     )
     parser.add_argument(
         "--cwd",

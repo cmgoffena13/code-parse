@@ -18,10 +18,10 @@ from src.cli.install_mcp import (
 from src.utils import get_version
 
 
-def test_bare_cbp_prints_help(
+def test_bare_codeparse_prints_help(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp"])
+    monkeypatch.setattr(sys, "argv", ["codeparse"])
     assert main() == 0
     out = capsys.readouterr().out
     assert "usage:" in out
@@ -32,10 +32,10 @@ def test_bare_cbp_prints_help(
 def test_version_flag_prints_and_exits_zero(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp", "--version"])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "--version"])
     assert main() == 0
     out = capsys.readouterr().out
-    assert "cbp Version:" in out
+    assert "codeparse Version:" in out
     assert get_version() in out
 
 
@@ -44,9 +44,9 @@ def test_info_flag_prints_paths_and_exits_zero(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    config_dir = tmp_path / "codebase-parse-config"
-    monkeypatch.setenv("CODEBASE_PARSE_CONFIG_DIR", str(config_dir))
-    monkeypatch.setattr(sys, "argv", ["cbp", "--info"])
+    config_dir = tmp_path / "code-parse-config"
+    monkeypatch.setenv("CODE_PARSE_CONFIG_DIR", str(config_dir))
+    monkeypatch.setattr(sys, "argv", ["codeparse", "--info"])
     assert main() == 0
     out = capsys.readouterr().out
     assert "CLI Path:" in out
@@ -60,18 +60,18 @@ def test_mcp_missing_directory_exits_one(
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "no-such-dir"
-    monkeypatch.setattr(sys, "argv", ["cbp", "mcp", "--cwd", str(missing)])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "mcp", "--cwd", str(missing)])
     assert main() == 1
     err = capsys.readouterr().err
     assert "Not a directory" in err
 
 
 def test_main_starts_mcp_stdio(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp", "mcp", "--cwd", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "mcp", "--cwd", str(tmp_path)])
     fake_mcp = MagicMock()
     fake_server = MagicMock()
     fake_server.mcp = fake_mcp
-    monkeypatch.setitem(sys.modules, "src.cbp_mcp.server", fake_server)
+    monkeypatch.setitem(sys.modules, "src.codeparse_mcp.server", fake_server)
     assert main() == 0
     fake_mcp.run.assert_called_once_with(transport="stdio")
 
@@ -88,10 +88,10 @@ def test_install_mcp_merges_into_cursor_and_claude(
         json.dumps({"mcpServers": {"other": {"command": "noop"}}}),
         encoding="utf-8",
     )
-    fake_cli = tmp_path / "cbp"
+    fake_cli = tmp_path / "codeparse"
     fake_cli.write_text("#!/bin/sh\n", encoding="utf-8")
 
-    monkeypatch.setattr(sys, "argv", ["cbp", "--install-mcp"])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "--install-mcp"])
     monkeypatch.setattr(
         "src.cli.install_mcp.cursor_mcp_config_path",
         lambda: cursor,
@@ -109,19 +109,19 @@ def test_install_mcp_merges_into_cursor_and_claude(
     out = capsys.readouterr().out
     assert str(cursor) in out
     assert str(claude) in out
-    assert '"cbp"' in out
+    assert '"codeparse"' in out
     assert "${workspaceFolder}" in out
 
     cursor_data = json.loads(cursor.read_text(encoding="utf-8"))
     assert cursor_data["mcpServers"]["other"]["command"] == "noop"
-    assert cursor_data["mcpServers"]["cbp"] == {
+    assert cursor_data["mcpServers"]["codeparse"] == {
         "type": "stdio",
         "command": str(fake_cli.resolve()),
         "args": ["mcp", "--cwd", "${workspaceFolder}"],
     }
 
     claude_data = json.loads(claude.read_text(encoding="utf-8"))
-    assert claude_data["mcpServers"]["cbp"] == {
+    assert claude_data["mcpServers"]["codeparse"] == {
         "command": str(fake_cli.resolve()),
         "args": ["mcp"],
     }
@@ -130,7 +130,7 @@ def test_install_mcp_merges_into_cursor_and_claude(
 def test_install_mcp_cli_exits_one_when_nothing_written(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp", "--install-mcp"])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "--install-mcp"])
     monkeypatch.setattr("src.cli.install_mcp.install_mcp", list)
     assert main() == 1
 
@@ -142,7 +142,7 @@ def test_install_mcp_permission_error_prints_manual_entry(
 ) -> None:
     cursor = tmp_path / "cursor.json"
     claude = tmp_path / "claude.json"
-    cli = tmp_path / "cbp"
+    cli = tmp_path / "codeparse"
     cli.write_text("x", encoding="utf-8")
 
     def boom(_self: Path, *_args: object, **_kwargs: object) -> None:
@@ -163,13 +163,13 @@ def test_install_mcp_helper_writes_absolute_command(
 ) -> None:
     cursor = tmp_path / "cursor.json"
     claude = tmp_path / "claude.json"
-    cli = tmp_path / "bin" / "cbp"
+    cli = tmp_path / "bin" / "codeparse"
     cli.parent.mkdir()
     cli.write_text("x", encoding="utf-8")
 
     written = install_mcp(cli_path=cli, cursor_config=cursor, claude_config=claude)
     assert written == [cursor, claude]
-    entry = json.loads(cursor.read_text(encoding="utf-8"))["mcpServers"]["cbp"]
+    entry = json.loads(cursor.read_text(encoding="utf-8"))["mcpServers"]["codeparse"]
     assert entry["command"] == str(cli.resolve())
     assert entry["args"] == ["mcp", "--cwd", "${workspaceFolder}"]
     out = capsys.readouterr().out
@@ -179,7 +179,7 @@ def test_install_mcp_helper_writes_absolute_command(
 def test_resolve_cli_path_uses_argv_when_not_frozen(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    binary = tmp_path / "cbp"
+    binary = tmp_path / "codeparse"
     binary.write_text("x", encoding="utf-8")
     monkeypatch.setattr(sys, "argv", [str(binary)])
     monkeypatch.delattr(sys, "frozen", raising=False)
@@ -189,7 +189,7 @@ def test_resolve_cli_path_uses_argv_when_not_frozen(
 def test_resolve_cli_path_uses_executable_when_frozen(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    binary = tmp_path / "cbp-frozen"
+    binary = tmp_path / "codeparse-frozen"
     binary.write_text("x", encoding="utf-8")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "executable", str(binary))
@@ -239,7 +239,7 @@ def test_merge_mcp_server_rejects_non_object_servers(tmp_path: Path) -> None:
     path = tmp_path / "mcp.json"
     path.write_text(json.dumps({"mcpServers": []}), encoding="utf-8")
     with pytest.raises(TypeError, match="mcpServers must be an object"):
-        merge_mcp_server(path, {"command": "cbp"})
+        merge_mcp_server(path, {"command": "codeparse"})
 
 
 def test_create_skill_writes_skill_md(
@@ -247,10 +247,12 @@ def test_create_skill_writes_skill_md(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["cbp", "--create-skill", "--cwd", str(tmp_path)])
+    monkeypatch.setattr(
+        sys, "argv", ["codeparse", "--create-skill", "--cwd", str(tmp_path)]
+    )
     assert main() == 0
     out = capsys.readouterr().out
-    skill_path = tmp_path / ".claude" / "skills" / "codebase-parse" / "SKILL.md"
+    skill_path = tmp_path / ".claude" / "skills" / "code-parse" / "SKILL.md"
     assert skill_path.is_file()
     assert str(skill_path) in out
     text = skill_path.read_text(encoding="utf-8")
@@ -264,7 +266,9 @@ def test_create_skill_missing_cwd_exits_one(
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "gone"
-    monkeypatch.setattr(sys, "argv", ["cbp", "--create-skill", "--cwd", str(missing)])
+    monkeypatch.setattr(
+        sys, "argv", ["codeparse", "--create-skill", "--cwd", str(missing)]
+    )
     assert main() == 1
     assert "Not a directory" in capsys.readouterr().err
 
@@ -276,7 +280,7 @@ def test_index_incremental(
 ) -> None:
     (tmp_path / ".gitignore").write_text("# fixture\n", encoding="utf-8")
     (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
-    monkeypatch.setattr(sys, "argv", ["cbp", "index", "--cwd", str(tmp_path)])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "index", "--cwd", str(tmp_path)])
     assert main() == 0
     assert "Indexed" in capsys.readouterr().err
 
@@ -289,7 +293,7 @@ def test_index_full_reload(
     (tmp_path / ".gitignore").write_text("# fixture\n", encoding="utf-8")
     (tmp_path / "mod.py").write_text("def hello():\n    return 1\n", encoding="utf-8")
     monkeypatch.setattr(
-        sys, "argv", ["cbp", "index", "--full-reload", "--cwd", str(tmp_path)]
+        sys, "argv", ["codeparse", "index", "--full-reload", "--cwd", str(tmp_path)]
     )
     assert main() == 0
     assert "Indexed" in capsys.readouterr().err
@@ -301,6 +305,6 @@ def test_index_missing_cwd_exits_one(
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "gone"
-    monkeypatch.setattr(sys, "argv", ["cbp", "index", "--cwd", str(missing)])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "index", "--cwd", str(missing)])
     assert main() == 1
     assert "Not a directory" in capsys.readouterr().err

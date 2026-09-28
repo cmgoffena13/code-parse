@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 from src.cli.commands import build_arg_parser, make_parser
-from src.utils import get_codebase_parse_config_dir, get_version
+from src.utils import get_code_parse_config_dir, get_version
 
 
 def _require_dir(path: Path) -> Path | None:
@@ -28,7 +28,7 @@ def _run_index(root: Path, *, full: bool) -> int:
 
 def _run_mcp(root: Path) -> int:
     os.chdir(root)
-    from src.cbp_mcp.server import mcp
+    from src.codeparse_mcp.server import mcp
 
     mcp.run(transport="stdio")
     return 0
@@ -39,10 +39,10 @@ def main() -> int:
     if args.info:
         cli_path = Path(sys.argv[0]).resolve()
         print(f"CLI Path: {cli_path}")
-        print(f"Config Directory: {get_codebase_parse_config_dir()}")
+        print(f"Config Directory: {get_code_parse_config_dir()}")
         return 0
     if args.version:
-        print(f"cbp Version: {get_version()}")
+        print(f"codeparse Version: {get_version()}")
         return 0
     if args.install_mcp:
         from src.cli.install_mcp import install_mcp
@@ -53,7 +53,7 @@ def main() -> int:
             return 0
         return 1
     if args.create_skill:
-        from src.cbp_mcp.skill import generate_skill
+        from src.codeparse_mcp.skill import generate_skill
 
         root = _require_dir(args.cwd)
         if root is None:

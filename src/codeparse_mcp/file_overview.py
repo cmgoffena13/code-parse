@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from src.cbp_mcp.clip import clipped_doc_lines
+from src.codeparse_mcp.clip import clipped_doc_lines
 from src.db import CodeDB
 
 _SYMBOLS_SQL = """

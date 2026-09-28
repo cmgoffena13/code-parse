@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from src.cbp_mcp.clip import clip
+from src.codeparse_mcp.clip import clip
 from src.db import CodeDB
 
 _MAX_REFERENCE_CONTEXT = 150

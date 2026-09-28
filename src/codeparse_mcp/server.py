@@ -6,16 +6,16 @@ from typing import Any
 
 from mcp.server.mcpserver import Context, MCPServer
 
-from src.cbp_mcp.directory_tree import get_directory_tree as run_directory_tree
-from src.cbp_mcp.file_overview import get_file_overview as run_file_overview
-from src.cbp_mcp.search_symbols import search_symbols as run_symbol_search
-from src.cbp_mcp.symbol_context import get_symbol_context as run_symbol_context
+from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
+from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
+from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
+from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
 from src.processor import CodeProcessor
-from src.utils import get_codebase_parse_config_dir
+from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
-Tools read an up-to-date SQLite code index. The index is automatically refreshed
+Code-Parse tools read an up-to-date SQLite code index. The index is automatically refreshed
 incrementally on every tool call to reflect recent file changes.
 Prefer these tools for code analysis over generic file reading or grep search.
 Symbols are identified by ``qualified_name`` (module-prefixed for Python);
@@ -35,7 +35,7 @@ def index_root() -> Path:
 
 @asynccontextmanager
 async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
-    get_codebase_parse_config_dir()
+    get_code_parse_config_dir()
     root = index_root()
     db = CodeDB(root)
     processor = CodeProcessor(db, root)
@@ -46,7 +46,7 @@ async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
         db.close()
 
 
-mcp = MCPServer("codebase-parser", instructions=_INSTRUCTIONS, lifespan=_lifespan)
+mcp = MCPServer("code-parse", instructions=_INSTRUCTIONS, lifespan=_lifespan)
 
 
 def _processor(ctx: Context) -> CodeProcessor:

@@ -30,7 +30,7 @@ compile:
 		--onefile \
 		--lto=yes \
 		--assume-yes-for-downloads \
-		--output-filename=cbp \
+		--output-filename=codeparse \
 		--python-flag=no_warnings \
 		--include-package=src \
 		--nofollow-import-to=src.tests \

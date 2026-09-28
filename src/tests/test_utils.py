@@ -37,7 +37,7 @@ def test_get_version_frozen_falls_back_to_exe_dir(
         '[project]\nname = "x"\nversion = "1.2.3"\n',
         encoding="utf-8",
     )
-    exe = exe_dir / "cbp"
+    exe = exe_dir / "codeparse"
     exe.write_text("x", encoding="utf-8")
     monkeypatch.setattr(sys, "frozen", True, raising=False)
     monkeypatch.setattr(sys, "_MEIPASS", str(tmp_path / "empty-meipass"), raising=False)
