@@ -109,17 +109,13 @@ def search_symbols(
 def get_symbol_context(
     qualified_name: str,
     ctx: Context,
-    include_tests: bool = False,
     include_references: bool = False,
 ) -> str:
-    """Return the symbol definition (source lines). By default excludes references (calls, accesses,
-    type annotations). Set ``include_references`` to include them. By default excludes references from ``is_test`` files;
-    set ``include_tests`` to include them."""
+    """Return the symbol definition (source lines). By default excludes references
+    (calls, accesses, type annotations). Set ``include_references`` to include them."""
     name = qualified_name.strip()
     return _processor(ctx).run_query(
-        lambda db: run_symbol_context(
-            db, name, include_tests=include_tests, include_references=include_references
-        )
+        lambda db: run_symbol_context(db, name, include_references=include_references)
     )
 
 

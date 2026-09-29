@@ -38,9 +38,9 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 - Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
 - Use this for definitions, callers, and reference traces.
 - ``search_symbols`` is repo-wide. To map one known file, use ``get_file_overview``.
-- ``search_symbols`` defaults to skipping ``is_test`` files; ``get_symbol_context``
-  defaults to skipping references from ``is_test`` files. Set ``include_tests``
-  on either when you need them.
+- ``search_symbols`` defaults to skipping ``is_test`` files; set ``include_tests``
+  when you need them. ``get_symbol_context`` definitions omit references unless
+  ``include_references`` is set.
 
 ### get_file_overview
 - One file's imports + symbol tree (each node has `qualified_name`).

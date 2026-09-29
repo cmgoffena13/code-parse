@@ -27,7 +27,6 @@ FROM symbol_references AS sr
 INNER JOIN files AS f
     ON f.id = sr.source_file_id
 WHERE sr.ref_symbol_qualified_name = ?
-{test_filter}
 ORDER BY sr.ref_kind, f.path, sr.source_line
 LIMIT ?
 """
@@ -56,15 +55,12 @@ def get_symbol_context(
     db: CodeDB,
     qualified_name: str,
     *,
-    include_tests: bool = False,
     include_references: bool = False,
 ) -> str:
     """
-    Return symbol metadata, source for the indexed span, and reference subsections
-    grouped by ``ref_kind`` (only kinds with at least one row are shown).
-
-    By default skips references from ``is_test`` files. Pass
-    ``include_tests=True`` to include them.
+    Return symbol metadata and source for the indexed span. With
+    ``include_references=True``, also append reference subsections grouped by
+    ``ref_kind`` (only kinds with at least one row are shown).
 
     ``qualified_name`` must equal ``symbols.qualified_name`` (module-prefixed for
     Python). Bare names do not match.
@@ -117,9 +113,7 @@ def get_symbol_context(
 
     if include_references:
         ref_rows = db.connection.execute(
-            _REFERENCES_SQL.format(
-                test_filter="" if include_tests else "  AND f.is_test = 0"
-            ),
+            _REFERENCES_SQL,
             (key, _REFERENCE_FETCH_LIMIT),
         ).fetchall()
         by_kind: defaultdict[str, list] = defaultdict(list)

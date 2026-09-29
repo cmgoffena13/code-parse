@@ -32,25 +32,26 @@ def _index(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_symbol_context_excludes_test_refs_by_default(tmp_path: Path) -> None:
+def test_symbol_context_definition_omits_references_by_default(tmp_path: Path) -> None:
+    root = _index(tmp_path)
+    db = CodeDB(root)
+    try:
+        out = get_symbol_context(db, "pkg.target.helper")
+        assert "## Definition" in out
+        assert "pkg/user.py" not in out
+        assert "tests/test_target.py" not in out
+        assert "## Calls" not in out
+    finally:
+        db.close()
+
+
+def test_symbol_context_include_references_lists_all_refs(tmp_path: Path) -> None:
     root = _index(tmp_path)
     db = CodeDB(root)
     try:
         out = get_symbol_context(db, "pkg.target.helper", include_references=True)
         assert "pkg/user.py" in out
-        assert "tests/test_target.py" not in out
-    finally:
-        db.close()
-
-
-def test_symbol_context_include_tests(tmp_path: Path) -> None:
-    root = _index(tmp_path)
-    db = CodeDB(root)
-    try:
-        out = get_symbol_context(
-            db, "pkg.target.helper", include_tests=True, include_references=True
-        )
-        assert "pkg/user.py" in out
         assert "tests/test_target.py" in out
+        assert "## Calls" in out
     finally:
         db.close()
