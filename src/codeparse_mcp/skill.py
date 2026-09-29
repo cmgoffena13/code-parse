@@ -9,54 +9,45 @@ allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_co
 
 ## Identifiers
 
-Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
-`src.db.CodeDB` or `src.processor.CodeProcessor.process` — not the bare name
-(`CodeDB`, `process`). Always copy `qualified_name` from tool output into
-`get_symbol_context`. Never invent or shorten it.
+Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g. `src.db.CodeDB` or `src.processor.CodeProcessor.process`. 
+Never invent or shorten it.
 
 ## Pick the narrowest tool
 
-| Question type | Tool |
+| Question Type | Recommended Tool |
 | --- | --- |
 | Known file / package API (`__init__.py`, public exports) | `get_file_overview` on that path |
-| Filename / path hunt (`*dialect*`, `**/cli/*.py`) | `find_paths` |
 | "Where is X defined?" / keyword hunt | `search_symbols` → `get_symbol_context` |
-| "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` |
+| "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` (include_references=True) |
 | "Who imports module M?" | `find_importers` (file path) |
 | Lost in an unfamiliar repo (no path hint) | `get_directory_tree` **once**, then stop |
-| Local layout under a known directory | `find_paths` → `get_directory_tree(path=…)` |
 
 ## Workflow details
 
-### find_paths
-- Glob-style match over indexed paths (not file contents).
-- Use before ``search_symbols`` when the clue is a filename or directory.
-- Defaults to skipping ``is_test`` files; set ``include_tests`` when you need them.
+### ``glob`` / ``grep`` → ``get_directory_tree(path=…)``
+- Use when the clue is a filename or directory pattern.
+- Prefer scoped `path` over dumping `get_directory_tree` for the whole repo.
+- Defaults to skipping test files; set ``include_tests`` when you need them.
 
-### search_symbols → get_symbol_context
+### ``grep`` → ``get_file_overview``
+- One file's imports + symbol tree (each node has `qualified_name`).
+- Best for package surfaces: e.g. `sqlmesh/core/model/__init__.py`, not the whole tree plus every sibling module.
+
+### ``search_symbols`` → ``get_symbol_context``
 - Prefer specific terms from the request.
 - Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
-- Use this for definitions, callers, and reference traces.
+- Use this for definitions, callers, and reference traces by setting ``include_references`` to True.
 - ``search_symbols`` is repo-wide. To map one known file, use ``get_file_overview``.
-- ``search_symbols`` defaults to skipping ``is_test`` files; set ``include_tests``
-  when you need them. ``get_symbol_context`` definitions omit references unless
-  ``include_references`` is set.
+- ``search_symbols`` defaults to skipping test files; set ``include_tests`` when you need them.
 
-### get_file_overview
-- One file's imports + symbol tree (each node has `qualified_name`).
-- Best for package surfaces: e.g. `sqlmesh/core/model/__init__.py`, not the
-  whole tree plus every sibling module.
-
-### find_importers
+### ``find_importers``
 - Fan-in for a module file. 
 - Use to discover importers instead of sampling `get_file_overview` across files.
-- Defaults to skipping importer files marked ``is_test``; only set
-  ``include_tests`` when you need them.
+- Defaults to skipping test files; only set ``include_tests`` when you need them.
 
-### get_directory_tree
+### ``get_directory_tree``
 - Layout with line/symbol counts. Omit ``path`` only when you lack any map.
-- When ``find_paths`` returns a directory, pass that exact path to scope the
-  tree to that branch — never dump the full repo after you already have a path.
+- When ``glob`` / ``grep`` returns a directory, pass that exact path to scope the tree to that branch.
 - Never call it repeatedly in one task.
 
 ## Rules

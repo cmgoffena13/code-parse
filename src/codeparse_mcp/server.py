@@ -16,8 +16,9 @@ from src.processor import CodeProcessor
 from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
-codeparse tools read an up-to-date SQLite code index. The index is automatically refreshed
-incrementally on every tool call to reflect recent file changes. Start the server in the repository you want to index.
+codeparse tools read an up-to-date SQLite code index. 
+The index is automatically refreshed on every tool call to reflect recent file changes. 
+Start the server in the repository you want to index.
 """
 
 
@@ -52,18 +53,20 @@ def _processor(ctx: Context) -> CodeProcessor:
 
 @mcp.tool()
 def get_directory_tree(ctx: Context, path: str | None = None) -> str:
-    """Return the indexed directory/file tree with line and symbol counts.
-    Optional ``path`` scopes to one indexed directory (exact path). Prefer
-    ``glob`` first, then pass the directory here instead of dumping the full repo.
-    If the user already named a package or file, call ``get_file_overview`` or ``search_symbols`` instead.
-    Do not call this repeatedly in one task."""
+    """
+    Return the repo's directory/file tree with line and symbol counts.
+    Optional ``path`` scopes to one directory tree (exact path).
+    Do not call this repeatedly in one task.
+    """
     return _processor(ctx).run_query(lambda db: run_directory_tree(db, path=path))
 
 
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
-    """Return imports and a nested symbol tree for one file (``qualified_name``
-    + line count). Use ``get_symbol_context`` for definitions."""
+    """
+    Return imports and a nested symbol tree for one file (``qualified_name`` + line count).
+    Use ``get_symbol_context`` for definitions.
+    """
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
@@ -75,11 +78,11 @@ def search_symbols(
     limit: int = 10,
     include_tests: bool = False,
 ) -> str:
-    """Full-text search across indexed symbols (``qualified_name``, signatures,
-    docstrings). Repo-wide only — use ``get_file_overview`` to map one known
-    file. By default excludes ``is_test`` files; set ``include_tests`` to search
-    those too. Returns ranked ``qualified_name`` hits for ``get_symbol_context``.
-    Example queries: ``transpile``, ``loader OR load``"""
+    """
+    Full-text search across symbols (``qualified_name``, signatures, and docstrings).
+    Excludes test files by default. Set ``include_tests`` to include them.
+    Example queries: ``transpile``, ``loader OR load``, ``dialect AND format``
+    """
     return _processor(ctx).run_query(
         lambda db: run_symbol_search(
             db,
@@ -96,8 +99,11 @@ def get_symbol_context(
     ctx: Context,
     include_references: bool = False,
 ) -> str:
-    """Return the symbol definition (source lines). By default excludes references
-    (calls, accesses, type annotations). Set ``include_references`` to include them."""
+    """
+    Return the symbol definition (source lines).
+    Excludes references (calls, accesses, type annotations) by default. Set ``include_references`` to include them.
+    Use instead of ``read`` to get symbol definitions.
+    """
     name = qualified_name.strip()
     return _processor(ctx).run_query(
         lambda db: run_symbol_context(db, name, include_references=include_references)
@@ -106,9 +112,11 @@ def get_symbol_context(
 
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context, include_tests: bool = False) -> str:
-    """Return indexed files that import a given module file as
-    ``• path:line - symbols``. By default excludes ``is_test`` files; set
-    ``include_tests`` to include them. Use for who-imports / dependency fan-in."""
+    """
+    Return files that import a given module file as ``• path:line - symbols``.
+    Excludes test files by default; set ``include_tests`` to include them.
+    Use for who-imports / dependency fan-in.
+    """
     path = file_path.strip()
     return _processor(ctx).run_query(
         lambda db: run_find_importers(db, path, include_tests=include_tests)
