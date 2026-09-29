@@ -39,8 +39,8 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
     when resolved, and ``imports.import_path`` as a fallback for unresolved rows
     that still name the module's ``normalized_path``.
 
-    By default skips importer files marked ``is_test``. Pass
-    ``include_tests=True`` to include them.
+    By default skips importer files marked ``is_test`` (path rules: ``tests/``,
+    ``test_*.py``, etc.). Pass ``include_tests=True`` to include them.
     """
     try:
         path = normalize_repo_file_path(file_path, db.root)

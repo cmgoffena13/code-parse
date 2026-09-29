@@ -182,6 +182,9 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     return "\n\n".join(parts)
 
 
+_MCP_ARG_META = frozenset({"toolName", "tool_name", "server", "serverName", "name"})
+
+
 def _tool_name_from_mapping(payload: Any) -> str | None:
     if not isinstance(payload, dict):
         return None
@@ -211,14 +214,116 @@ def _sorted_tool_counts(counts: Counter[str]) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
-def _cursor_tool_usage(run: Any) -> dict[str, int]:
+def _counts_from_timeline(timeline: list[dict[str, Any]]) -> dict[str, int]:
+    return _sorted_tool_counts(
+        Counter(str(e.get("tool") or "unknown") for e in timeline)
+    )
+
+
+def _compact_tool_args(args: Any, *, max_val: int = 120) -> dict[str, Any] | None:
+    """Keep scalar tool args only (no result blobs). Truncate long strings."""
+    if not isinstance(args, dict) or not args:
+        return None
+    out: dict[str, Any] = {}
+    for key, value in args.items():
+        if key in _MCP_ARG_META or key == "ctx":
+            continue
+        if isinstance(value, str):
+            out[key] = value if len(value) <= max_val else value[: max_val - 1] + "…"
+        elif isinstance(value, (int, float, bool)) or value is None:
+            out[key] = value
+    return out or None
+
+
+def _raw_args_from_cursor_message(message: Any) -> Any:
+    if not isinstance(message, dict):
+        return None
+    raw = message.get("args")
+    if message.get("type") == "mcp" and isinstance(raw, dict):
+        nested = raw.get("args")
+        if nested is None:
+            nested = raw.get("arguments")
+        if isinstance(nested, dict):
+            return nested
+        return {k: v for k, v in raw.items() if k not in _MCP_ARG_META}
+    return raw if isinstance(raw, dict) else None
+
+
+def _timeline_entry(n: int, tool: str, args: Any = None) -> dict[str, Any]:
+    entry: dict[str, Any] = {"n": n, "tool": tool}
+    compact = _compact_tool_args(args)
+    if compact:
+        entry["args"] = compact
+    return entry
+
+
+def _shorten_arg_value(value: Any) -> Any:
+    """Collapse absolute sqlmesh-cache paths to repo-relative for display."""
+    if not isinstance(value, str):
+        return value
+    marker = "/eval/cache/sqlmesh/"
+    idx = value.find(marker)
+    if idx >= 0:
+        return value[idx + len(marker) :]
+    return value
+
+
+def _fmt_arg_bits(args: dict[str, Any]) -> str:
+    return ", ".join(f"{k}={_shorten_arg_value(v)!r}" for k, v in args.items())
+
+
+def _print_verbose_timeline(timeline: list[dict[str, Any]] | None) -> None:
+    if not timeline:
+        return
+    print("  timeline:")
+    for entry in timeline:
+        if not isinstance(entry, dict):
+            continue
+        tool = entry.get("tool") or "?"
+        n = entry.get("n", "?")
+        args = entry.get("args") if isinstance(entry.get("args"), dict) else None
+        if args:
+            print(f"    {n}. {tool}  {_fmt_arg_bits(args)}")
+        else:
+            print(f"    {n}. {tool}")
+
+
+def _render_timeline_report(rows: list[dict[str, Any]]) -> str:
+    """Human-readable ordered tool calls for every run."""
+    lines: list[str] = ["Tool call timelines", "===================", ""]
+    for row in rows:
+        timeline = row.get("tool_timeline")
+        if not isinstance(timeline, list) or not timeline:
+            continue
+        header = (
+            f"{row.get('task_id')} / {row.get('arm')} / "
+            f"repeat={row.get('repeat')}  "
+            f"passed={row.get('passed')}  status={row.get('status')}"
+        )
+        lines.append(header)
+        lines.append("-" * len(header))
+        for entry in timeline:
+            if not isinstance(entry, dict):
+                continue
+            tool = entry.get("tool") or "?"
+            n = entry.get("n", "?")
+            args = entry.get("args") if isinstance(entry.get("args"), dict) else None
+            if args:
+                lines.append(f"  {n}. {tool}  {_fmt_arg_bits(args)}")
+            else:
+                lines.append(f"  {n}. {tool}")
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _cursor_tool_timeline(run: Any) -> list[dict[str, Any]]:
     from cursor_sdk.types import AgentConversationTurn, ToolCallConversationStep
 
     try:
         turns = run.conversation()
     except Exception:  # noqa: BLE001 — conversation may be unavailable
-        return {}
-    counts: Counter[str] = Counter()
+        return []
+    timeline: list[dict[str, Any]] = []
     for wrap in turns:
         turn = getattr(wrap, "turn", wrap)
         steps = getattr(turn, "steps", None)
@@ -239,8 +344,14 @@ def _cursor_tool_usage(run: Any) -> dict[str, int]:
             if message is None and isinstance(step, dict):
                 message = step.get("message")
             name = _normalize_tool_name(_tool_name_from_mapping(message) or "unknown")
-            counts[name] += 1
-    return _sorted_tool_counts(counts)
+            timeline.append(
+                _timeline_entry(
+                    len(timeline) + 1,
+                    name,
+                    _raw_args_from_cursor_message(message),
+                )
+            )
+    return timeline
 
 
 def run_cursor_agent(
@@ -250,7 +361,9 @@ def run_cursor_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
+) -> tuple[
+    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
+]:
     from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
     from cursor_sdk.types import StdioMcpServerConfig
 
@@ -290,13 +403,15 @@ def run_cursor_agent(
             result.usage if result.usage is not None else run.usage
         )
         run_id = getattr(result, "id", None) or getattr(run, "id", None)
-        tools_used = _cursor_tool_usage(run)
+        timeline = _cursor_tool_timeline(run)
+        tools_used = _counts_from_timeline(timeline)
         return (
             text,
             str(run_id) if run_id else None,
             usage,
             str(status),
             tools_used,
+            timeline,
         )
 
 
@@ -306,7 +421,9 @@ async def _run_claude_query(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
+) -> tuple[
+    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
+]:
     from claude_agent_sdk import (
         AssistantMessage,
         ClaudeAgentOptions,
@@ -351,7 +468,7 @@ async def _run_claude_query(
     session_id: str | None = None
     status = "finished"
     result_text = ""
-    tool_counts: Counter[str] = Counter()
+    timeline: list[dict[str, Any]] = []
     num_turns: int | None = None
 
     async for message in query(prompt=prompt, options=options):
@@ -360,7 +477,13 @@ async def _run_claude_query(
                 if isinstance(block, TextBlock):
                     text_parts.append(block.text)
                 elif isinstance(block, ToolUseBlock):
-                    tool_counts[_normalize_tool_name(block.name or "unknown")] += 1
+                    timeline.append(
+                        _timeline_entry(
+                            len(timeline) + 1,
+                            _normalize_tool_name(block.name or "unknown"),
+                            block.input,
+                        )
+                    )
         elif isinstance(message, ResultMessage):
             session_id = message.session_id
             usage = _claude_usage_dict(
@@ -378,7 +501,14 @@ async def _run_claude_query(
         usage = {**usage, "num_turns": num_turns}
 
     text = result_text or "\n".join(text_parts)
-    return text, session_id, usage, status, _sorted_tool_counts(tool_counts)
+    return (
+        text,
+        session_id,
+        usage,
+        status,
+        _counts_from_timeline(timeline),
+        timeline,
+    )
 
 
 def run_claude_agent(
@@ -387,7 +517,9 @@ def run_claude_agent(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
+) -> tuple[
+    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
+]:
     return asyncio.run(
         _run_claude_query(arm=arm, prompt=prompt, model=model, sqlmesh=sqlmesh)
     )
@@ -401,7 +533,9 @@ def run_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
+) -> tuple[
+    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
+]:
     if provider == "cursor":
         return run_cursor_agent(
             arm=arm, prompt=prompt, model=model, api_key=api_key, sqlmesh=sqlmesh
@@ -486,7 +620,8 @@ def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, 
 
 
 def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> str:
-    task_ids = sorted({r["task_id"] for r in rows})
+    # Preserve run order (first appearance), not alphabetical.
+    task_ids: list[str] = list(dict.fromkeys(r["task_id"] for r in rows))
     cols = ("task", "baseline", "codeparse", "ratio")
     widths = {c: len(c) for c in cols}
     table: list[dict[str, str]] = []
@@ -587,6 +722,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--smoke", action="store_true", help="All tasks, one repeat each"
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Print per-step tool call timelines after each run",
+    )
     parser.add_argument("--tasks", nargs="+", help="Task ids to run")
     parser.add_argument(
         "--repeats", type=int, default=10, help="Repeats per arm (default 10)"
@@ -654,20 +795,23 @@ def main(argv: list[str] | None = None) -> int:
                         f"arm={arm} repeat={repeat}"
                     )
                     try:
-                        text, run_id, usage, status, tools_used = run_agent(
-                            provider=provider,
-                            arm=arm,
-                            prompt=prompt,
-                            model=model,
-                            api_key=api_key,
-                            sqlmesh=sqlmesh,
+                        text, run_id, usage, status, tools_used, tool_timeline = (
+                            run_agent(
+                                provider=provider,
+                                arm=arm,
+                                prompt=prompt,
+                                model=model,
+                                api_key=api_key,
+                                sqlmesh=sqlmesh,
+                            )
                         )
                     except Exception as exc:  # noqa: BLE001 — keep going
-                        text, run_id, usage, status, tools_used = (
+                        text, run_id, usage, status, tools_used, tool_timeline = (
                             "",
                             None,
                             None,
                             f"error:{exc}",
+                            None,
                             None,
                         )
                     passed, missing = grade(
@@ -686,6 +830,7 @@ def main(argv: list[str] | None = None) -> int:
                         "run_id": run_id,
                         "usage": usage,
                         "tools_used": tools_used,
+                        "tool_timeline": tool_timeline,
                         "answer": text,
                         "model": model,
                         "sqlmesh_sha": catalog["sha"],
@@ -699,6 +844,8 @@ def main(argv: list[str] | None = None) -> int:
                         f"tools_used={tools_used} "
                         f"missing={missing}"
                     )
+                    if args.verbose:
+                        _print_verbose_timeline(tool_timeline)
             print()
 
     print(f"\nWrote {out_path}")
@@ -706,6 +853,9 @@ def main(argv: list[str] | None = None) -> int:
     summary_path = out_path.with_suffix(".summary.txt")
     summary_path.write_text(summary, encoding="utf-8")
     print(f"Wrote {summary_path}")
+    timeline_path = out_path.with_suffix(".timeline.txt")
+    timeline_path.write_text(_render_timeline_report(rows), encoding="utf-8")
+    print(f"Wrote {timeline_path}")
     print()
     print(summary, end="")
     return 0

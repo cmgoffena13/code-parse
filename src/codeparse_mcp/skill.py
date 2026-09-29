@@ -37,9 +37,7 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 - Prefer specific terms from the request.
 - Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
 - Use this for definitions, callers, and reference traces.
-- When you already know the file, pass ``file_path`` (exact indexed path) to
-  search inside it instead of dumping ``get_file_overview``. Discover paths with
-  ``find_paths`` — do not invent globs on ``search_symbols``.
+- ``search_symbols`` is repo-wide. To map one known file, use ``get_file_overview``.
 - ``search_symbols`` defaults to skipping ``is_test`` files; ``get_symbol_context``
   defaults to skipping references from ``is_test`` files. Set ``include_tests``
   on either when you need them.
@@ -52,7 +50,7 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 ### find_importers
 - Fan-in for a module file. 
 - Use to discover importers instead of sampling `get_file_overview` across files.
-- Defaults to skipping importer files with ``is_test`` symbols; only set
+- Defaults to skipping importer files marked ``is_test``; only set
   ``include_tests`` when you need them.
 
 ### get_directory_tree

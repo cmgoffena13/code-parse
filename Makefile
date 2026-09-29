@@ -1,4 +1,4 @@
-.PHONY: install ready format lint type-check test test-cov run compile eval eval-smoke eval-clean cursor claude
+.PHONY: install ready format lint type-check test test-cov run compile eval eval-smoke eval-clean cursor claude v verbose
 
 install:
 	uv sync --all-extras
@@ -28,19 +28,23 @@ test-cov:
 # Usage:
 #   make eval-smoke
 #   make eval-smoke claude
+#   make eval-smoke v
+#   make eval-smoke verbose
 #   make eval cursor
+# Note: `make … -v` is Make's --version; use the `v` / `verbose` goal instead.
 RUNTIME := $(firstword $(filter cursor claude,$(MAKECMDGOALS)))
 ifeq ($(RUNTIME),)
 RUNTIME := cursor
 endif
+VERBOSE := $(if $(filter v verbose,$(MAKECMDGOALS)),--verbose,)
 
 eval:
-	uv run -- python eval/bench.py --provider $(RUNTIME)
+	uv run -- python eval/bench.py --provider $(RUNTIME) $(VERBOSE)
 
 eval-smoke:
-	uv run -- python eval/bench.py --smoke --provider $(RUNTIME)
+	uv run -- python eval/bench.py --smoke --provider $(RUNTIME) $(VERBOSE)
 
-cursor claude:
+cursor claude v verbose:
 	@:
 
 eval-clean:

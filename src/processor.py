@@ -17,10 +17,11 @@ T = TypeVar("T")
 
 
 def file_path_is_test(relative_path: Path) -> bool:
-    """True for conventional test layout: ``tests/`` tree, ``test_*.py``, etc.
+    """True for conventional test *files*, not packages named ``test``.
 
-    Does not treat a package segment named ``test`` (e.g. ``core/test/``) as a
-    test suite — only the plural ``tests`` directory.
+    Matches ``tests/`` trees, ``test_*.py``, ``*_test.py``, and ``conftest.py``.
+    A segment named ``test`` (e.g. ``sqlmesh/core/test/definition.py``) is not
+    enough — that is product code.
     """
     if "tests" in relative_path.parts:
         return True
@@ -166,12 +167,8 @@ class CodeProcessor:
                 file_id, file_bytes, module_qn=module_qn, is_package=is_package
             )
             n = len(symbols)
-            if any(s.get("is_test") for s in symbols):
-                is_test = True
             file_row["symbol_count"] = n
-            file_row["is_test"] = is_test
             snap["symbol_count"] = n
-            snap["is_test"] = is_test
             self.db_batches["symbols"].extend(symbols)
             self.db_batches["imports"].extend(imports)
             self.db_batches["symbol_references"].extend(references)

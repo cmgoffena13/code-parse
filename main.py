@@ -46,10 +46,6 @@ def main() -> None:
     _print_section("FILE OVERVIEW", get_file_overview(db, "sqlmesh/core/dialect.py"))
     _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
     _print_section(
-        "SEARCH IN FILE",
-        search_symbols(db, "format", file_path="sqlmesh/core/dialect.py"),
-    )
-    _print_section(
         "SYMBOL CONTEXT",
         get_symbol_context(db, "sqlmesh.core.dialect.format_model_expressions"),
     )

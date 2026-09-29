@@ -7,57 +7,53 @@
       "kind": "search",
       "prompt": "Where does SQL dialect transpilation / dialect normalization happen in this SQLMesh checkout? Identify the primary module and the key entrypoint symbol. Answer with exactly these fields on their own lines:\nqualified_name: <module-prefixed symbol>\nfile: <path relative to repo root>\nlines: <start-end>\nevidence: <one short sentence>",
       "must_contain": [
-        "sqlmesh/core/dialect.py",
         "sqlmesh.core.dialect.format_model_expressions",
+        "sqlmesh/core/dialect.py",
         "1006"
       ]
     },
     {
       "id": "trace-sqlmesh-plan",
       "kind": "call_graph",
-      "prompt": "Trace what happens when a user runs `sqlmesh plan`. Start from the Click CLI command and name the Context/GenericContext method it calls. Answer with exactly these fields on their own lines:\ncli_symbol: <CLI function qualified_name or file:line>\ncallee_qualified_name: <plan method qualified_name>\nfile: <file of the plan method>\nlines: <start-end of the plan method>\nevidence: <one short sentence>",
+      "prompt": "Trace what happens when a user runs `sqlmesh plan`. Start from the Click CLI command and name the GenericContext method it calls. Answer with exactly these fields on their own lines:\ncli_symbol: <CLI function qualified_name>\ncallee_qualified_name: <plan method qualified_name>\nfile: <file of the plan method>\nlines: <start-end of the plan method>\nevidence: <one short sentence>",
       "must_contain": [
+        "sqlmesh.cli.main.plan",
         "sqlmesh.core.context.GenericContext.plan",
-        "sqlmesh/core/context.py"
-      ],
-      "must_contain_any": [
-        ["sqlmesh/cli/main.py", "sqlmesh.cli.main"],
-        ["1412", "1413"]
+        "sqlmesh/core/context.py",
+        "1413"
       ]
     },
     {
       "id": "callers-context-render",
       "kind": "callers",
-      "prompt": "Which files depend on Context.render / GenericContext.render, and who calls it? Name the callee's qualified_name (the defining method) and at least one caller file. Answer with exactly these fields on their own lines:\nqualified_name: <callee module-prefixed name>\nfile: <one caller file path relative to repo root>\nlines: <a line number from that caller>\nevidence: <one short sentence>",
+      "prompt": "List every call site of GenericContext.render / Context.render under sqlmesh/ and web/ (exclude tests/). Answer with exactly these fields on their own lines:\nqualified_name: <callee module-prefixed name>\ncallers: <every call site with its file path and line number>\nevidence: <one short sentence>",
       "must_contain": [
-        "sqlmesh.core.context.GenericContext.render"
-      ],
-      "must_contain_any": [
-        [
-          "sqlmesh/magics.py",
-          "sqlmesh/cli/main.py",
-          "web/server/api/endpoints/commands.py"
-        ],
-        ["328", "668", "311", "119"]
+        "sqlmesh.core.context.GenericContext.render",
+        "sqlmesh/magics.py",
+        "328",
+        "668",
+        "sqlmesh/cli/main.py",
+        "311",
+        "web/server/api/endpoints/commands.py",
+        "119"
       ]
     },
     {
       "id": "hierarchy-evaluation-strategy",
       "kind": "hierarchy",
-      "prompt": "What does the snapshot evaluation pipeline inherit from? Focus on EvaluationStrategy in sqlmesh/core/snapshot/evaluator.py: name its qualified_name, its direct base, and at least two concrete subclasses. Answer with exactly these fields on their own lines:\nqualified_name: <EvaluationStrategy module-prefixed name>\nparent_classes: <comma-separated bases>\nchild_classes: <comma-separated subclass names>\nfile: sqlmesh/core/snapshot/evaluator.py\nevidence: <one short sentence>",
+      "prompt": "In sqlmesh/core/snapshot/evaluator.py, name EvaluationStrategy's qualified_name, its direct base class, and its direct subclasses. Answer with exactly these fields on their own lines:\nqualified_name: <EvaluationStrategy module-prefixed name>\nparent_classes: <comma-separated direct bases>\nchild_classes: <comma-separated direct subclass names>\nfile: sqlmesh/core/snapshot/evaluator.py\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.core.snapshot.evaluator.EvaluationStrategy",
-        "sqlmesh/core/snapshot/evaluator.py",
-        "ABC"
-      ],
-      "must_contain_any": [
-        ["IncrementalStrategy", "MaterializableStrategy", "SymbolicStrategy", "ViewStrategy", "FullRefreshStrategy"]
+        "ABC",
+        "SymbolicStrategy",
+        "PromotableStrategy",
+        "sqlmesh/core/snapshot/evaluator.py"
       ]
     },
     {
       "id": "impact-create-model-kind",
       "kind": "callers",
-      "prompt": "How do I safely rename model-kind-related config parsing? Identify the central `create_model_kind` helper and at least one call site that would break if it were renamed. Answer with exactly these fields on their own lines:\nqualified_name: <create_model_kind module-prefixed name>\nfile: <one caller file path relative to repo root>\nlines: <a line number from that caller>\nevidence: <one short sentence>",
+      "prompt": "Identify the central `create_model_kind` helper and the call site in model definition construction that would break if it were renamed. Answer with exactly these fields on their own lines:\nqualified_name: <create_model_kind module-prefixed name>\nfile: <caller file path relative to repo root>\nlines: <caller line number>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.core.model.kind.create_model_kind",
         "sqlmesh/core/model/definition.py",
@@ -67,7 +63,7 @@
     {
       "id": "raise-conflicting-plan-error",
       "kind": "refs",
-      "prompt": "Find every place the exception ConflictingPlanError is raised (not merely imported). Answer with exactly these fields on their own lines:\nqualified_name: <the exception's module-prefixed name>\nraise_locations: <comma-separated file:line entries>\nevidence: <one short sentence>",
+      "prompt": "Find every place the exception ConflictingPlanError is raised (not merely imported). Answer with exactly these fields on their own lines:\nqualified_name: <the exception's module-prefixed name>\nraise_locations: <every raise site with its file path and line number>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.utils.errors.ConflictingPlanError",
         "sqlmesh/core/plan/evaluator.py",
@@ -79,25 +75,66 @@
     {
       "id": "overview-model-package",
       "kind": "directory_tree",
-      "prompt": "What is the public API surface of the sqlmesh.core.model package? List key modules and at least two public symbols exported from sqlmesh/core/model/__init__.py. Answer with exactly these fields on their own lines:\ndirectory: sqlmesh/core/model\nmodules: <comma-separated module filenames under that package>\npublic_symbols: <comma-separated exported names>\nevidence: <one short sentence>",
+      "prompt": "What is the public API surface of the sqlmesh.core.model package? List every Python module file under that package (filenames only) and every public name re-exported from sqlmesh/core/model/__init__.py. Answer with exactly these fields on their own lines:\ndirectory: sqlmesh/core/model\nmodules: <comma-separated module filenames>\npublic_symbols: <comma-separated exported names>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/model",
+        "cache.py",
+        "common.py",
+        "decorator.py",
         "definition.py",
-        "kind.py"
-      ],
-      "must_contain_any": [
-        ["SqlModel", "Model", "create_sql_model", "PythonModel"]
+        "kind.py",
+        "meta.py",
+        "schema.py",
+        "seed.py",
+        "ModelCache",
+        "OptimizedQueryCache",
+        "model",
+        "AuditResult",
+        "ExternalModel",
+        "Model",
+        "PythonModel",
+        "SeedModel",
+        "SqlModel",
+        "create_external_model",
+        "create_python_model",
+        "create_seed_model",
+        "create_sql_model",
+        "load_sql_based_model",
+        "load_sql_based_models",
+        "CustomKind",
+        "EmbeddedKind",
+        "ExternalKind",
+        "FullKind",
+        "IncrementalByTimeRangeKind",
+        "IncrementalByUniqueKeyKind",
+        "IncrementalUnmanagedKind",
+        "IncrementalByPartitionKind",
+        "ModelKind",
+        "ModelKindMixin",
+        "ModelKindName",
+        "SCDType2ByColumnKind",
+        "SCDType2ByTimeKind",
+        "SeedKind",
+        "TimeColumn",
+        "ViewKind",
+        "ManagedKind",
+        "model_kind_validator",
+        "ModelMeta",
+        "update_model_schemas",
+        "Seed"
       ]
     },
     {
       "id": "imports-of-core-dialect",
       "kind": "imports",
-      "prompt": "Which files import from sqlmesh.core.dialect, and what do they use from it? List every importer under sqlmesh/ and web/ (exclude tests/). For each file, name the imported symbols. Answer with exactly these fields on their own lines:\nimported_module: sqlmesh/core/dialect.py\nimporters: <one line per importer: path — symbols>\nevidence: <one short sentence>",
+      "prompt": "Which files import from sqlmesh.core.dialect under sqlmesh/ and web/ (exclude tests/)? For each importer, list the imported symbols. Answer with exactly these fields on their own lines:\nimported_module: sqlmesh/core/dialect.py\nimporters: <one line per importer as path — comma-separated symbols>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/dialect",
         "sqlmesh/__init__.py",
+        "extend_sqlglot",
         "sqlmesh/core/config/model.py",
         "sqlmesh/core/context.py",
+        "normalize_model_name",
         "sqlmesh/core/engine_adapter/athena.py",
         "sqlmesh/core/engine_adapter/base.py",
         "sqlmesh/core/engine_adapter/base_postgres.py",
@@ -132,21 +169,19 @@
         "sqlmesh/utils/lineage.py",
         "web/server/api/endpoints/files.py",
         "web/server/api/endpoints/lineage.py"
-      ],
-      "must_contain_any": [
-        ["normalize_model_name", "parse", "extend_sqlglot", "to_schema", "schema_"]
       ]
     },
     {
       "id": "overview-plan-subsystem",
       "kind": "directory_tree",
-      "prompt": "Summarize the structure of the plan / diff subsystem without reading every file. Name the plan package directory, context_diff module, and at least two key types (e.g. Plan, PlanBuilder, ContextDiff). Answer with exactly these fields on their own lines:\ndirectory: sqlmesh/core/plan\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
+      "prompt": "Summarize the plan / diff subsystem without reading every file. Name the plan package directory, the sibling context-diff module path, and the four primary types (plan object, plan builder, plan evaluator, context diff). Answer with exactly these fields on their own lines:\ndirectory: <plan package directory>\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/plan",
-        "sqlmesh/core/context_diff.py"
-      ],
-      "must_contain_any": [
-        ["Plan", "PlanBuilder", "ContextDiff", "PlanEvaluator"]
+        "sqlmesh/core/context_diff.py",
+        "Plan",
+        "PlanBuilder",
+        "ContextDiff",
+        "PlanEvaluator"
       ]
     },
     {
