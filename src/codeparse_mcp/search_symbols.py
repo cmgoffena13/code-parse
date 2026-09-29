@@ -20,6 +20,7 @@ INNER JOIN symbols AS s
 INNER JOIN files AS f 
     ON f.id = s.file_id
 WHERE symbols_fts MATCH ?
+  AND (? = 1 OR s.is_test = 0)
 ORDER BY rank
 LIMIT ?
 """
@@ -62,10 +63,15 @@ def _sig_doc_lines(detail_prefix: str, sig: str, doc: str) -> list[str]:
     return lines
 
 
-def search_symbols(db: CodeDB, query: str, limit: int = 20) -> str:
+def search_symbols(
+    db: CodeDB, query: str, limit: int = 20, *, include_tests: bool = False
+) -> str:
     """
     Search indexed symbols via ``symbols_fts``. Returns a tree grouped by file;
     each hit shows ``qualified_name`` for follow-up with ``get_symbol_context``.
+
+    By default skips ``is_test`` symbols. Pass ``include_tests=True`` to
+    search those too.
     """
     stripped = query.strip()
     if not stripped:
@@ -78,7 +84,7 @@ def search_symbols(db: CodeDB, query: str, limit: int = 20) -> str:
     try:
         rows = db.connection.execute(
             _SYMBOL_SEARCH_SQL,
-            (fts_query, limit),
+            (fts_query, 1 if include_tests else 0, limit),
         ).fetchall()
     except sqlite3.OperationalError as e:
         return f"Search failed for {query!r} ({fts_query!r}): {e}"

@@ -9,6 +9,7 @@ from mcp.server.mcpserver import Context, MCPServer
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
+from src.codeparse_mcp.find_paths import find_paths as run_find_paths
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
@@ -59,6 +60,16 @@ def get_directory_tree(ctx: Context) -> str:
 
 
 @mcp.tool()
+def find_paths(pattern: str, ctx: Context, limit: int = 50) -> str:
+    """Find indexed file/directory paths by glob-style pattern (e.g. ``*dialect*``,
+    ``sqlmesh/core/*.py``). Prefer this over ``get_directory_tree`` when hunting
+    for a path. Does not search file contents."""
+    return _processor(ctx).run_query(
+        lambda db: run_find_paths(db, pattern, limit=limit)
+    )
+
+
+@mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
     """Return imports and a symbol tree for one file. Each symbol includes its
     ``qualified_name`` for ``get_symbol_context``."""
@@ -67,11 +78,16 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
 
 
 @mcp.tool()
-def search_symbols(query: str, ctx: Context, limit: int = 20) -> str:
+def search_symbols(
+    query: str, ctx: Context, limit: int = 10, include_tests: bool = False
+) -> str:
     """Full-text search across indexed symbols (``qualified_name``, signatures,
-    docstrings). Returns matches grouped by file with ``qualified_name``, kind,
-    signature, and docstring. Example queries: ``memory``, ``loader OR load``"""
-    return _processor(ctx).run_query(lambda db: run_symbol_search(db, query, limit))
+    docstrings). By default excludes ``is_test`` symbols; set ``include_tests``
+    to search those too. Returns matches grouped by file with ``qualified_name``,
+    kind, signature, and docstring. Example queries: ``memory``, ``loader OR load``"""
+    return _processor(ctx).run_query(
+        lambda db: run_symbol_search(db, query, limit, include_tests=include_tests)
+    )
 
 
 @mcp.tool()

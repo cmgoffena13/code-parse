@@ -4,7 +4,7 @@ SKILL_INSTRUCTIONS = """\
 ---
 name: codeparse
 description: Use the codeparse MCP Server effectively.
-allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers
+allowed-tools: get_directory_tree find_paths get_file_overview search_symbols get_symbol_context find_importers
 ---
 
 ## Identifiers
@@ -19,6 +19,7 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 | Question type | Tool |
 | --- | --- |
 | Known file / package API (`__init__.py`, public exports) | `get_file_overview` on that path |
+| Filename / path hunt (`*dialect*`, `**/cli/*.py`) | `find_paths` |
 | "Where is X defined?" / keyword hunt | `search_symbols` → `get_symbol_context` |
 | "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` |
 | "Who imports module M?" | `find_importers` (file path) |
@@ -26,10 +27,15 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 
 ## Workflow details
 
+### find_paths
+- Glob-style match over indexed paths (not file contents).
+- Use before ``search_symbols`` when the clue is a filename or directory.
+
 ### search_symbols → get_symbol_context
 - Prefer specific terms from the request.
 - Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
 - Use this for definitions, callers, and reference traces.
+- Defaults to skipping ``is_test`` symbols; only set ``include_tests`` when you need them.
 
 ### get_file_overview
 - One file's imports + symbol tree (each node has `qualified_name`).
