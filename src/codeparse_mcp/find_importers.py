@@ -9,7 +9,7 @@ _MAX_IMPORTER_FILES = 100
 _RESOLVE_FILE_SQL = """
 SELECT id, path, normalized_path
 FROM files
-WHERE path = ? OR normalized_path = ?
+WHERE path = ?
 LIMIT 1
 """
 
@@ -29,41 +29,32 @@ ORDER BY f.path, i.line_number, i.imported_symbol
 """
 
 
-def _path_and_dotted(module_or_path: str) -> tuple[str, str]:
-    """Map user input to a file path candidate and a dotted module candidate."""
-    raw = module_or_path.strip().replace("\\", "/")
-    if raw.endswith(".py"):
-        path = raw
-        dotted = raw[: -len(".py")].replace("/", ".")
-    elif "/" in raw:
-        path = f"{raw}.py"
-        dotted = raw.replace("/", ".")
-    else:
-        dotted = raw
-        path = raw.replace(".", "/") + ".py"
-    return path, dotted
+def _normalize_file_path(file_path: str) -> str:
+    return file_path.strip().replace("\\", "/")
 
 
-def find_importers(db: CodeDB, module_or_path: str) -> str:
+def find_importers(db: CodeDB, file_path: str) -> str:
     """
-    List files that import the given module.
+    List files that import the module at ``file_path``.
 
-    ``module_or_path`` may be a repo-relative path (``sqlmesh/core/dialect.py``)
-    or a dotted module (``sqlmesh.core.dialect``). Matching uses
-    ``imports.imported_file_id`` when resolved, and ``imports.import_path`` as
-    a fallback for unresolved rows that still name the module.
+    ``file_path`` is a repo-relative path with POSIX slashes, matching
+    ``files.path`` / ``get_file_overview`` (e.g. ``sqlmesh/core/dialect.py``).
+    Matching uses ``imports.imported_file_id`` when resolved, and
+    ``imports.import_path`` as a fallback for unresolved rows that still name
+    the module's ``normalized_path``.
     """
-    stripped = module_or_path.strip()
-    if not stripped:
-        return "No module or path given; pass a non-empty module_or_path."
+    path = _normalize_file_path(file_path)
+    if not path:
+        return "No file path given; pass a non-empty file_path."
 
-    path, dotted = _path_and_dotted(stripped)
-    target = db.connection.execute(_RESOLVE_FILE_SQL, (path, dotted)).fetchone()
+    target = db.connection.execute(_RESOLVE_FILE_SQL, (path,)).fetchone()
+    if target is None and not path.endswith(".py"):
+        target = db.connection.execute(_RESOLVE_FILE_SQL, (f"{path}.py",)).fetchone()
     if target is None:
         return (
-            f"No indexed file matches {stripped!r} "
-            f"(tried path {path!r} and module {dotted!r}). "
-            f"Use a path relative to {db.root} or its dotted module form."
+            f"No indexed file matches {path!r}. "
+            f"Use the local path as stored in the index (relative to {db.root}), "
+            f"e.g. via get_directory_tree or get_file_overview."
         )
 
     target_id = int(target["id"])
@@ -72,7 +63,7 @@ def find_importers(db: CodeDB, module_or_path: str) -> str:
 
     rows = list(db.connection.execute(_IMPORTERS_SQL, (target_id, target_dotted)))
     if not rows:
-        return f"No importers of {target_path} ({target_dotted}) in the index."
+        return f"No importers of {target_path} in the index."
 
     # Group by importer file; within a file, collapse duplicate signatures.
     by_file: OrderedDict[str, list] = OrderedDict()
@@ -83,32 +74,38 @@ def find_importers(db: CodeDB, module_or_path: str) -> str:
     shown_files = list(by_file.items())[:_MAX_IMPORTER_FILES]
 
     lines_out: list[str] = [
-        f"Importers of {target_path} ({target_dotted}) — {total_files} files",
+        "Legend: L = Lines, S = Symbols\n",
+        f"Importers of {target_path} — {total_files} files",
         "",
     ]
 
     for importer_path, file_rows in shown_files:
-        lines_out.append(importer_path)
         seen_sigs: set[str] = set()
         symbols: list[str] = []
         seen_symbols: set[str] = set()
+        stmt_lines: list[str] = []
         for row in file_rows:
             sig = (row["signature"] or "").strip()
+            line_n = int(row["line_number"])
             if sig and sig not in seen_sigs:
                 seen_sigs.add(sig)
-                lines_out.append(f"  L{row['line_number']}: {sig}")
+                stmt_lines.append(f"  {sig} ({line_n}L)")
             elif not sig:
-                key = f"{row['line_number']}:{row['imported_symbol']}"
+                key = f"{line_n}:{row['imported_symbol']}"
                 if key not in seen_sigs:
                     seen_sigs.add(key)
                     sym = row["imported_symbol"] or "(module)"
-                    lines_out.append(f"  L{row['line_number']}: {sym}")
+                    stmt_lines.append(f"  {sym} ({line_n}L)")
             sym = (row["imported_symbol"] or "").strip()
             if sym and sym not in seen_symbols:
                 seen_symbols.add(sym)
                 symbols.append(sym)
+        # Match directory_tree file stats: name (NS) / (NL, NS).
         if symbols:
-            lines_out.append(f"  symbols: {', '.join(symbols)}")
+            lines_out.append(f"{importer_path} ({len(symbols)}S)")
+        else:
+            lines_out.append(importer_path)
+        lines_out.extend(stmt_lines)
         lines_out.append("")
 
     if total_files > _MAX_IMPORTER_FILES:

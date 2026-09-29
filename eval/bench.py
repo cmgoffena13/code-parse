@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Token-usage benchmark: code-parse MCP vs read/grep on a pinned SQLMesh checkout.
+"""Token-usage benchmark: codeparse MCP vs read/grep on a pinned SQLMesh checkout.
 
 Supports --provider cursor (Cursor SDK) or claude (Claude Agent SDK).
 """
@@ -180,6 +180,33 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     return "\n\n".join(parts)
 
 
+def _count_cursor_tool_calls(run: Any) -> int:
+    from cursor_sdk.types import AgentConversationTurn, ToolCallConversationStep
+
+    try:
+        turns = run.conversation()
+    except Exception:  # noqa: BLE001 — conversation may be unavailable
+        return 0
+    count = 0
+    for wrap in turns:
+        turn = getattr(wrap, "turn", wrap)
+        steps = getattr(turn, "steps", None)
+        if steps is None and isinstance(turn, dict):
+            steps = turn.get("steps") or []
+        if not isinstance(turn, AgentConversationTurn) and steps is None:
+            continue
+        for step in steps or ():
+            is_tool = (
+                isinstance(step, ToolCallConversationStep)
+                or getattr(step, "type", None) == "toolCall"
+            )
+            if not is_tool and isinstance(step, dict):
+                is_tool = step.get("type") == "toolCall"
+            if is_tool:
+                count += 1
+    return count
+
+
 def run_cursor_agent(
     *,
     arm: str,
@@ -187,7 +214,7 @@ def run_cursor_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
     from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
     from cursor_sdk.types import StdioMcpServerConfig
 
@@ -227,7 +254,8 @@ def run_cursor_agent(
             result.usage if result.usage is not None else run.usage
         )
         run_id = getattr(result, "id", None) or getattr(run, "id", None)
-        return text, str(run_id) if run_id else None, usage, str(status)
+        tool_calls = _count_cursor_tool_calls(run)
+        return text, str(run_id) if run_id else None, usage, str(status), tool_calls
 
 
 async def _run_claude_query(
@@ -236,12 +264,13 @@ async def _run_claude_query(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
     from claude_agent_sdk import (
         AssistantMessage,
         ClaudeAgentOptions,
         ResultMessage,
         TextBlock,
+        ToolUseBlock,
         query,
     )
 
@@ -280,17 +309,22 @@ async def _run_claude_query(
     session_id: str | None = None
     status = "finished"
     result_text = ""
+    tool_calls = 0
+    num_turns: int | None = None
 
     async for message in query(prompt=prompt, options=options):
         if isinstance(message, AssistantMessage):
             for block in message.content:
                 if isinstance(block, TextBlock):
                     text_parts.append(block.text)
+                elif isinstance(block, ToolUseBlock):
+                    tool_calls += 1
         elif isinstance(message, ResultMessage):
             session_id = message.session_id
             usage = _claude_usage_dict(
                 message.usage if isinstance(message.usage, dict) else None
             )
+            num_turns = message.num_turns
             if message.result:
                 result_text = message.result
             if message.is_error or (
@@ -298,8 +332,11 @@ async def _run_claude_query(
             ):
                 status = message.subtype or "error"
 
+    if usage is not None and num_turns is not None:
+        usage = {**usage, "num_turns": num_turns}
+
     text = result_text or "\n".join(text_parts)
-    return text, session_id, usage, status
+    return text, session_id, usage, status, tool_calls
 
 
 def run_claude_agent(
@@ -308,7 +345,7 @@ def run_claude_agent(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
     return asyncio.run(
         _run_claude_query(arm=arm, prompt=prompt, model=model, sqlmesh=sqlmesh)
     )
@@ -322,7 +359,7 @@ def run_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
     if provider == "cursor":
         return run_cursor_agent(
             arm=arm, prompt=prompt, model=model, api_key=api_key, sqlmesh=sqlmesh
@@ -350,6 +387,12 @@ def _fmt_ratio(ratio: float | None) -> str:
     return f"{ratio:.2f}x"
 
 
+def _fmt_tools(n: float | None) -> str:
+    if n is None:
+        return "—"
+    return str(round(n))
+
+
 def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, Any]:
     arm_rows = [r for r in rows if r["task_id"] == task_id and r["arm"] == arm]
     passes = [r for r in arm_rows if r["passed"]]
@@ -368,21 +411,30 @@ def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, 
         for r in passes
         if r.get("usage") and r["usage"].get("cache_read_tokens") is not None
     ]
+    pass_tools = [
+        int(r["tool_calls"]) for r in passes if r.get("tool_calls") is not None
+    ]
+    all_tools = [
+        int(r["tool_calls"]) for r in arm_rows if r.get("tool_calls") is not None
+    ]
     return {
         "n": len(arm_rows),
         "passes": len(passes),
         "median_pass": median_or_none(pass_totals),
         "median_all": median_or_none(all_totals),
         "median_cache_pass": median_or_none(pass_cache),
+        "median_tools_pass": median_or_none(pass_tools),
+        "median_tools_all": median_or_none(all_tools),
     }
 
 
-def summarize(rows: list[dict[str, Any]]) -> None:
+def summarize(rows: list[dict[str, Any]]) -> str:
     task_ids = sorted({r["task_id"] for r in rows})
     cols = ("task", "baseline", "codeparse", "ratio")
     widths = {c: len(c) for c in cols}
     table: list[dict[str, str]] = []
     overall_pass: dict[str, list[int]] = {"baseline": [], "codeparse": []}
+    overall_tools: dict[str, list[int]] = {"baseline": [], "codeparse": []}
 
     for task_id in task_ids:
         base = _arm_stats(rows, task_id, "baseline")
@@ -390,15 +442,22 @@ def summarize(rows: list[dict[str, Any]]) -> None:
         for arm, stats in (("baseline", base), ("codeparse", treat)):
             if stats["median_pass"] is not None:
                 overall_pass[arm].append(int(stats["median_pass"]))
+            if stats["median_tools_pass"] is not None:
+                overall_tools[arm].append(int(stats["median_tools_pass"]))
 
         def cell(stats: dict[str, Any]) -> str:
             score = f"{stats['passes']}/{stats['n']} pass"
+            tools = _fmt_tools(
+                stats["median_tools_pass"]
+                if stats["median_pass"] is not None
+                else stats["median_tools_all"]
+            )
             if stats["median_pass"] is not None:
                 tokens = _fmt_tokens(stats["median_pass"])
                 cache = _fmt_tokens(stats["median_cache_pass"])
-                return f"{score}  {tokens} tokens  (cache {cache})"
+                return f"{score}  {tokens} tokens  (cache {cache}; {tools} tools)"
             tokens = _fmt_tokens(stats["median_all"])
-            return f"{score}  {tokens} tokens*"
+            return f"{score}  {tokens} tokens*  ({tools} tools)"
 
         ratio = None
         if base["median_pass"] and treat["median_pass"]:
@@ -414,23 +473,32 @@ def summarize(rows: list[dict[str, Any]]) -> None:
         for c in cols:
             widths[c] = max(widths[c], len(row[c]))
 
-    print("\nSummary")
-    print("=======")
-    header = "  ".join(c.ljust(widths[c]) for c in cols)
-    print(header)
-    print("  ".join("-" * widths[c] for c in cols))
+    lines: list[str] = [
+        "Summary",
+        "=======",
+        "  ".join(c.ljust(widths[c]) for c in cols),
+        "  ".join("-" * widths[c] for c in cols),
+    ]
     for row in table:
-        print("  ".join(row[c].ljust(widths[c]) for c in cols))
+        lines.append("  ".join(row[c].ljust(widths[c]) for c in cols))
 
     base_all = median_or_none(overall_pass["baseline"])
     treat_all = median_or_none(overall_pass["codeparse"])
     ratio_all = (treat_all / base_all) if base_all and treat_all else None
-    print()
-    print("Overall (median of per-task passing medians)")
-    print(f"  baseline : {_fmt_tokens(base_all)} tokens")
-    print(f"  codeparse: {_fmt_tokens(treat_all)} tokens")
-    print(f"  ratio    : {_fmt_ratio(ratio_all)}  (codeparse / baseline)")
-    print("  * token medians marked with * include failed runs (no passes yet)")
+    base_tools = median_or_none(overall_tools["baseline"])
+    treat_tools = median_or_none(overall_tools["codeparse"])
+    tools_ratio = (treat_tools / base_tools) if base_tools and treat_tools else None
+    lines.extend(
+        [
+            "",
+            "Overall (median of per-task passing medians)",
+            f"  baseline : {_fmt_tokens(base_all)} tokens  ({_fmt_tools(base_tools)} tools)",
+            f"  codeparse: {_fmt_tokens(treat_all)} tokens  ({_fmt_tools(treat_tools)} tools)",
+            f"  ratio    : {_fmt_ratio(ratio_all)} tokens  {_fmt_ratio(tools_ratio)} tools  (codeparse / baseline)",
+            "  * token medians marked with * include failed runs (no passes yet)",
+        ]
+    )
+    return "\n".join(lines) + "\n"
 
 
 def select_tasks(
@@ -526,7 +594,7 @@ def main(argv: list[str] | None = None) -> int:
                         f"arm={arm} repeat={repeat}"
                     )
                     try:
-                        text, run_id, usage, status = run_agent(
+                        text, run_id, usage, status, tool_calls = run_agent(
                             provider=provider,
                             arm=arm,
                             prompt=prompt,
@@ -535,7 +603,13 @@ def main(argv: list[str] | None = None) -> int:
                             sqlmesh=sqlmesh,
                         )
                     except Exception as exc:  # noqa: BLE001 — keep going
-                        text, run_id, usage, status = "", None, None, f"error:{exc}"
+                        text, run_id, usage, status, tool_calls = (
+                            "",
+                            None,
+                            None,
+                            f"error:{exc}",
+                            None,
+                        )
                     passed, missing = grade(
                         text,
                         task.get("must_contain", []),
@@ -551,6 +625,7 @@ def main(argv: list[str] | None = None) -> int:
                         "status": status,
                         "run_id": run_id,
                         "usage": usage,
+                        "tool_calls": tool_calls,
                         "answer": text,
                         "model": model,
                         "sqlmesh_sha": catalog["sha"],
@@ -561,11 +636,17 @@ def main(argv: list[str] | None = None) -> int:
                     print(
                         f"  status={status} passed={passed} "
                         f"total={None if not usage else usage.get('total_tokens')} "
+                        f"tools={tool_calls} "
                         f"missing={missing}"
                     )
 
     print(f"\nWrote {out_path}")
-    summarize(rows)
+    summary = summarize(rows)
+    summary_path = out_path.with_suffix(".summary.txt")
+    summary_path.write_text(summary, encoding="utf-8")
+    print(f"Wrote {summary_path}")
+    print()
+    print(summary, end="")
     return 0
 
 

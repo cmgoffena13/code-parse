@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.codeparse_mcp.directory_tree import get_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview
+from src.codeparse_mcp.find_importers import find_importers
 from src.codeparse_mcp.search_symbols import search_symbols
 from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
@@ -39,6 +40,9 @@ def main():
     print("\n")
     print(_banner("SYMBOL CONTEXT"))
     print(get_symbol_context(db, "src.git_utils.path_spec_for_indexing"))
+    print("\n")
+    print(_banner("FIND IMPORTERS"))
+    print(find_importers(db, "src/db.py"))
     print("\n")
 
 

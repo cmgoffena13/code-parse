@@ -22,7 +22,7 @@ def _isolate_code_parse_config(
     """Keep index DBs under this test's tmp dir (see ``utils.get_code_parse_config_dir``)."""
     monkeypatch.setenv(
         "CODE_PARSE_CONFIG_DIR",
-        str(tmp_path / "code-parse-config"),
+        str(tmp_path / "codeparse-config"),
     )
 
 

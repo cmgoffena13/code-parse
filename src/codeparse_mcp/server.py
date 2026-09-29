@@ -16,13 +16,14 @@ from src.processor import CodeProcessor
 from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
-Code-Parse tools read an up-to-date SQLite code index. The index is automatically refreshed
+codeparse tools read an up-to-date SQLite code index. The index is automatically refreshed
 incrementally on every tool call to reflect recent file changes.
 Prefer these tools for code analysis over generic file reading or grep search.
-Symbols are identified by ``qualified_name`` (module-prefixed for Python);
-copy it from ``search_symbols`` or ``get_file_overview`` into ``get_symbol_context``.
-For ``who imports module M``, use ``find_importers`` with a file path or dotted module.
-Start the server in the repository you want to index.
+Pick the narrowest tool: known paths → get_file_overview; symbol questions →
+search_symbols → get_symbol_context; import fan-in → find_importers.
+Avoid get_directory_tree unless you lack any path hint — it dumps the entire repo.
+Symbols use ``qualified_name`` (module-prefixed for Python); copy it from tool
+output into get_symbol_context. Start the server in the repository you want to index.
 """
 
 
@@ -48,7 +49,7 @@ async def _lifespan(_app: MCPServer) -> AsyncIterator[dict[str, Any]]:
         db.close()
 
 
-mcp = MCPServer("code-parse", instructions=_INSTRUCTIONS, lifespan=_lifespan)
+mcp = MCPServer("codeparse", instructions=_INSTRUCTIONS, lifespan=_lifespan)
 
 
 def _processor(ctx: Context) -> CodeProcessor:
@@ -57,19 +58,19 @@ def _processor(ctx: Context) -> CodeProcessor:
 
 @mcp.tool()
 def get_directory_tree(ctx: Context) -> str:
-    """Return the full directory/file tree of the indexed codebase with line counts
-    and symbol counts per file. Use this at the start of a session to understand project structure
-    before drilling into specific files or symbols."""
+    """Return the FULL indexed directory/file tree with line and symbol counts.
+    This is a large, repo-wide dump — expensive on big codebases. Use only when
+    you have no path hint and need an initial map. If the user already named a
+    package or file, call ``get_file_overview`` or ``search_symbols`` instead.
+    Do not call this repeatedly in one task."""
     return _processor(ctx).run_query(run_directory_tree)
 
 
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
-    """Return imports and a symbol tree for a single file. Each symbol is labeled
-    with its ``qualified_name`` (module-prefixed for Python), which you can pass
-    to ``get_symbol_context``. ``file_path`` is relative to the index root using
-    POSIX slashes, e.g. ``src/db.py``. Use after ``get_directory_tree`` to inspect
-    a specific file."""
+    """Return imports and a symbol tree for one file. Each symbol includes its
+    ``qualified_name`` for ``get_symbol_context``. ``file_path`` is relative to
+    the index root with POSIX slashes, e.g. ``src/db.py``."""
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
@@ -97,13 +98,13 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
 
 
 @mcp.tool()
-def find_importers(module_or_path: str, ctx: Context) -> str:
-    """Return every indexed file that imports a given module. Pass either a
-    repo-relative path (``sqlmesh/core/dialect.py``) or a dotted module
-    (``sqlmesh.core.dialect``). Use for \"who imports X\" / dependency fan-in;
+def find_importers(file_path: str, ctx: Context) -> str:
+    """Return every indexed file that imports a given module file. Pass a
+    repo-relative path with POSIX slashes (``sqlmesh/core/dialect.py``) — same
+    form as ``get_file_overview``. Use for "who imports X" / dependency fan-in;
     prefer this over sampling ``get_file_overview`` across many files."""
-    target = module_or_path.strip()
-    return _processor(ctx).run_query(lambda db: run_find_importers(db, target))
+    path = file_path.strip()
+    return _processor(ctx).run_query(lambda db: run_find_importers(db, path))
 
 
 def main() -> None:

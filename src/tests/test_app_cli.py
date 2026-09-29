@@ -44,7 +44,7 @@ def test_info_flag_prints_paths_and_exits_zero(
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
-    config_dir = tmp_path / "code-parse-config"
+    config_dir = tmp_path / "codeparse-config"
     monkeypatch.setenv("CODE_PARSE_CONFIG_DIR", str(config_dir))
     monkeypatch.setattr(sys, "argv", ["codeparse", "--info"])
     assert main() == 0
@@ -252,7 +252,7 @@ def test_create_skill_writes_skill_md(
     )
     assert main() == 0
     out = capsys.readouterr().out
-    skill_path = tmp_path / ".claude" / "skills" / "code-parse" / "SKILL.md"
+    skill_path = tmp_path / ".claude" / "skills" / "codeparse" / "SKILL.md"
     assert skill_path.is_file()
     assert str(skill_path) in out
     text = skill_path.read_text(encoding="utf-8")

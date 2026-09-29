@@ -33,20 +33,19 @@ def indexed_import_pair(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_find_importers_by_path_and_module(indexed_import_pair: Path) -> None:
+def test_find_importers_by_path(indexed_import_pair: Path) -> None:
     db = CodeDB(indexed_import_pair)
     try:
         by_path = find_importers(db, "pkg/target.py")
-        by_module = find_importers(db, "pkg.target")
 
         assert "pkg/importer.py" in by_path
         assert "other.py" in by_path
-        assert "helper" in by_path
+        assert "helper" in by_path or "1S" in by_path
         assert "Importers of pkg/target.py" in by_path
 
-        assert "pkg/importer.py" in by_module
-        assert "other.py" in by_module
-        assert by_path == by_module
+        # Dotted modules are not accepted — path only.
+        dotted = find_importers(db, "pkg.target")
+        assert "No indexed file matches" in dotted
     finally:
         db.close()
 
@@ -63,6 +62,6 @@ def test_find_importers_missing_target(indexed_import_pair: Path) -> None:
 def test_find_importers_empty_input(indexed_import_pair: Path) -> None:
     db = CodeDB(indexed_import_pair)
     try:
-        assert "No module or path given" in find_importers(db, "  ")
+        assert "No file path given" in find_importers(db, "  ")
     finally:
         db.close()

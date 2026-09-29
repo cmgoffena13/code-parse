@@ -2,8 +2,8 @@ from pathlib import Path
 
 SKILL_INSTRUCTIONS = """\
 ---
-name: Code-Parse
-description: Use the Code-Parse MCP Server effectively.
+name: codeparse
+description: Use the codeparse MCP Server effectively.
 allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers
 ---
 
@@ -14,54 +14,52 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 (`CodeDB`, `process`). Always copy `qualified_name` from tool output into
 `get_symbol_context`. Never invent or shorten it.
 
-## Workflow
+## Pick the narrowest tool
 
-### Phase 1: Orient
-Call `get_directory_tree` first. This gives the full project layout with line
-counts and symbol counts per file. Use it to:
-- Identify main source directories and entrypoints (e.g. `main.py`, `app.py`)
-- Spot high-symbol-count files (likely core modules)
-- Understand the project's shape before diving deeper
+Do **not** start every question with `get_directory_tree`. That tool returns the
+**entire** repo and is expensive on large codebases. Prefer:
 
-### Phase 2: Locate
-Call `search_symbols` with keywords from the user's request. This FTS-searches
-`qualified_name`, signatures, and docstrings.
-- Prefer specific terms likely to appear in the codebase
-- Copy the **`qualified_name`** from each hit — you need it for Phase 3
+| Question type | Tool |
+| --- | --- |
+| Known file / package API (`__init__.py`, public exports) | `get_file_overview` on that path |
+| "Where is X defined?" / keyword hunt | `search_symbols` → `get_symbol_context` |
+| "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` |
+| "Who imports module M?" | `find_importers` (repo-relative path) |
+| Lost in an unfamiliar repo (no path hint) | `get_directory_tree` **once**, then stop |
 
-For "who imports module M" / "what depends on this file", call
-`find_importers` with a repo-relative path (`pkg/mod.py`) or dotted module
-(`pkg.mod`). Do not sample `get_file_overview` across many files to discover
-importers.
+## Workflow details
 
-### Phase 3: Understand
-Call `get_symbol_context` with the exact **`qualified_name`** from Phase 2.
-This returns:
-- The **definition** (source lines for the indexed span)
-- **References** (calls, accesses, type annotations) with file paths and lines
-- Use this to trace how a symbol is used across the codebase
+### search_symbols → get_symbol_context
+- Prefer specific terms from the request.
+- Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
+- Use this for definitions, callers, and reference traces.
 
-### Phase 4: Inspect (optional)
-Call `get_file_overview` for one file's imports and full symbol tree (each
-node shows `qualified_name`). Useful when:
-- You need the full picture of a single file
-- You want every symbol in that file, not just one search hit
-- `file_path` is relative to the index root with POSIX slashes (e.g. `src/db.py`)
+### get_file_overview
+- One file's imports + symbol tree (each node has `qualified_name`).
+- Best for package surfaces: e.g. `sqlmesh/core/model/__init__.py`, not the
+  whole tree plus every sibling module.
+- `file_path` is relative to the index root with POSIX slashes.
+
+### find_importers
+- Fan-in for a module file. Pass the same path style as `get_file_overview`
+  (`pkg/mod.py`).
+- Do not discover importers by sampling `get_file_overview` across files.
+
+### get_directory_tree
+- Full-repo layout with line/symbol counts.
+- Only when you truly lack a map and the user did not name a path.
+- Never call it repeatedly in one task.
 
 ## Rules
-- Start with `get_directory_tree` if you lack a directory map.
-- Never guess a `qualified_name`. Take it only from `search_symbols` or
-  `get_file_overview` output.
-- For "where is X defined" or "who calls X", go
-  `search_symbols` → `get_symbol_context`.
-- For "who imports module M", call `find_importers`.
+- Never guess a `qualified_name`. Take it only from tool output.
+- Prefer one targeted call over many broad ones.
 - Cite file paths and line numbers in every response.
 """
 
 
 def generate_skill(root: Path | None = None) -> Path:
     base = (root or Path.cwd()).resolve()
-    output_path = base / ".claude" / "skills" / "code-parse" / "SKILL.md"
+    output_path = base / ".claude" / "skills" / "codeparse" / "SKILL.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(SKILL_INSTRUCTIONS, encoding="utf-8")
     return output_path

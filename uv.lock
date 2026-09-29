@@ -159,7 +159,7 @@ wheels = [
 ]
 
 [[package]]
-name = "code-parse"
+name = "codeparse"
 version = "0.1.7"
 source = { virtual = "." }
 dependencies = [

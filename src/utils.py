@@ -33,15 +33,15 @@ def ensure_dir(path: Path) -> Path:
 
 def get_code_parse_config_dir(*parts: str) -> Path:
     """
-    Base directory for code-parse local config/data.
+    Base directory for codeparse local config/data.
 
     Uses ``$CODE_PARSE_CONFIG_DIR`` when set (e.g. tests); otherwise
-    ``~/.config/code-parse``.
+    ``~/.config/codeparse``.
 
     If ``parts`` are provided, returns ``<base>/<parts...>`` and creates it.
     """
     override = os.environ.get("CODE_PARSE_CONFIG_DIR")
-    base = Path(override) if override else Path.home() / ".config" / "code-parse"
+    base = Path(override) if override else Path.home() / ".config" / "codeparse"
     return ensure_dir(base.joinpath(*parts))
 
 

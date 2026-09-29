@@ -11,14 +11,14 @@ def test_generate_skill_defaults_to_cwd(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     path = generate_skill()
-    assert path == tmp_path / ".claude" / "skills" / "code-parse" / "SKILL.md"
+    assert path == tmp_path / ".claude" / "skills" / "codeparse" / "SKILL.md"
     assert path.is_file()
     assert "qualified_name" in path.read_text(encoding="utf-8")
 
 
 def test_generate_skill_writes_under_explicit_root(tmp_path: Path) -> None:
     path = generate_skill(tmp_path)
-    assert path == tmp_path / ".claude" / "skills" / "code-parse" / "SKILL.md"
+    assert path == tmp_path / ".claude" / "skills" / "codeparse" / "SKILL.md"
     assert path.is_file()
 
 
