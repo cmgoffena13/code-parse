@@ -79,14 +79,25 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
 
 @mcp.tool()
 def search_symbols(
-    query: str, ctx: Context, limit: int = 10, include_tests: bool = False
+    query: str,
+    ctx: Context,
+    limit: int = 10,
+    file_path: str | None = None,
+    include_tests: bool = False,
 ) -> str:
     """Full-text search across indexed symbols (``qualified_name``, signatures,
-    docstrings). By default excludes ``is_test`` files; set
-    ``include_tests`` to search those too. Returns ranked ``qualified_name`` hits for
-    ``get_symbol_context``. Example queries: ``memory``, ``loader OR load``"""
+    docstrings). Optional ``file_path`` limits to one indexed file (exact path;
+    use ``find_paths`` to discover paths). By default excludes ``is_test`` files;
+    set ``include_tests`` to search those too. Returns ranked ``qualified_name``
+    hits for ``get_symbol_context``. Example queries: ``memory``, ``loader OR load``"""
     return _processor(ctx).run_query(
-        lambda db: run_symbol_search(db, query, limit, include_tests=include_tests)
+        lambda db: run_symbol_search(
+            db,
+            query,
+            limit,
+            file_path=file_path,
+            include_tests=include_tests,
+        )
     )
 
 

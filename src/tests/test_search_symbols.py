@@ -48,3 +48,21 @@ def test_search_symbols_include_tests(
         assert "test_format_model" in out
     finally:
         db.close()
+
+
+def test_search_symbols_file_path_scopes(
+    tmp_path: Path, python_fixtures_dir: Path
+) -> None:
+    root = _index(tmp_path, python_fixtures_dir)
+    db = CodeDB(root)
+    try:
+        out = search_symbols(db, "format_model", file_path="pkg/prod.py")
+        assert 'in "pkg/prod.py"' in out
+        assert "pkg.prod.format_model" in out
+        assert "tests/" not in out
+
+        missing = search_symbols(db, "format_model", file_path="pkg/missing.py")
+        assert 'in "pkg/missing.py"' in missing
+        assert "(0 matches)" in missing
+    finally:
+        db.close()
