@@ -82,9 +82,9 @@ def search_symbols(
     query: str, ctx: Context, limit: int = 10, include_tests: bool = False
 ) -> str:
     """Full-text search across indexed symbols (``qualified_name``, signatures,
-    docstrings). By default excludes ``is_test`` symbols; set ``include_tests``
-    to search those too. Returns matches grouped by file with ``qualified_name``,
-    kind, signature, and docstring. Example queries: ``memory``, ``loader OR load``"""
+    docstrings). By default excludes ``is_test`` files; set
+    ``include_tests`` to search those too. Returns ranked ``qualified_name`` hits for
+    ``get_symbol_context``. Example queries: ``memory``, ``loader OR load``"""
     return _processor(ctx).run_query(
         lambda db: run_symbol_search(db, query, limit, include_tests=include_tests)
     )
@@ -101,7 +101,7 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context, include_tests: bool = False) -> str:
     """Return indexed files that import a given module file as
-    ``• path:line - symbols``. By default skips files marked ``is_test``; set
+    ``• path:line - symbols``. By default excludes ``is_test`` files; set
     ``include_tests`` to include them. Use for who-imports / dependency fan-in."""
     path = file_path.strip()
     return _processor(ctx).run_query(

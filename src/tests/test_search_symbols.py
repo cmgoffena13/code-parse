@@ -25,8 +25,14 @@ def test_search_symbols_excludes_is_test_by_default(
     try:
         out = search_symbols(db, "format_model", limit=20)
         assert "pkg/prod.py" in out
-        assert "format_model" in out
+        assert "pkg.prod.format_model" in out
         assert "test_format_model" not in out
+        assert "tests/" not in out
+        assert "Legend: L = Lines" in out
+        assert "  • pkg.prod.format_model (" in out
+        assert "L)" in out
+        assert "Sig:" not in out
+        assert "Doc:" not in out
     finally:
         db.close()
 
@@ -38,7 +44,7 @@ def test_search_symbols_include_tests(
     db = CodeDB(root)
     try:
         out = search_symbols(db, "format_model", limit=20, include_tests=True)
-        assert "pkg/prod.py" in out
+        assert "pkg.prod.format_model" in out
         assert "test_format_model" in out
     finally:
         db.close()
