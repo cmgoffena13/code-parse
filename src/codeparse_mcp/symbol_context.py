@@ -53,7 +53,11 @@ def _definition_gutter_width(line_start: int, line_count: int) -> int:
 
 
 def get_symbol_context(
-    db: CodeDB, qualified_name: str, *, include_tests: bool = False
+    db: CodeDB,
+    qualified_name: str,
+    *,
+    include_tests: bool = False,
+    include_references: bool = False,
 ) -> str:
     """
     Return symbol metadata, source for the indexed span, and reference subsections
@@ -96,15 +100,10 @@ def get_symbol_context(
     except OSError as e:
         body_lines.append(f"    (could not read source file: {e})")
 
-    ref_rows = db.connection.execute(
-        _REFERENCES_SQL.format(
-            test_filter="" if include_tests else "  AND f.is_test = 0"
-        ),
-        (key, _REFERENCE_FETCH_LIMIT),
-    ).fetchall()
-
     lines: list[str] = [
-        "Legend: L = Line, • = Reference\n",
+        "Legend: L = Line"
+        if not include_references
+        else "Legend: L = Line, • = Reference\n",
         f"Symbol: {key}",
         f"Kind: {row['kind']}",
         f"File: {path}",
@@ -116,30 +115,37 @@ def get_symbol_context(
     ]
     lines.extend(body_lines)
 
-    by_kind: defaultdict[str, list] = defaultdict(list)
-    for r in ref_rows:
-        by_kind[r["ref_kind"]].append(r)
+    if include_references:
+        ref_rows = db.connection.execute(
+            _REFERENCES_SQL.format(
+                test_filter="" if include_tests else "  AND f.is_test = 0"
+            ),
+            (key, _REFERENCE_FETCH_LIMIT),
+        ).fetchall()
+        by_kind: defaultdict[str, list] = defaultdict(list)
+        for r in ref_rows:
+            by_kind[r["ref_kind"]].append(r)
 
-    covered = {k for k, _ in _REF_KIND_SECTIONS}
-    for kind, heading in _REF_KIND_SECTIONS:
-        items = by_kind.get(kind, [])
-        if not items:
-            continue
-        lines.append("")
-        lines.append(f"{heading} ({len(items)})")
-        for r in items:
-            lines.append(f"  • {r['source_path']}:{r['source_line']}")
+        covered = {k for k, _ in _REF_KIND_SECTIONS}
+        for kind, heading in _REF_KIND_SECTIONS:
+            items = by_kind.get(kind, [])
+            if not items:
+                continue
+            lines.append("")
+            lines.append(f"{heading} ({len(items)})")
+            for r in items:
+                lines.append(f"  • {r['source_path']}:{r['source_line']}")
 
-    for kind in sorted(by_kind.keys()):
-        if kind in covered:
-            continue
-        items = by_kind[kind]
-        if not items:
-            continue
-        title = kind.replace("_", " ").title()
-        lines.append("")
-        lines.append(f"## {title} ({len(items)})")
-        for r in items:
-            lines.append(f"  • {r['source_path']}:{r['source_line']}")
+        for kind in sorted(by_kind.keys()):
+            if kind in covered:
+                continue
+            items = by_kind[kind]
+            if not items:
+                continue
+            title = kind.replace("_", " ").title()
+            lines.append("")
+            lines.append(f"## {title} ({len(items)})")
+            for r in items:
+                lines.append(f"  • {r['source_path']}:{r['source_line']}")
 
     return "\n".join(lines) + "\n"

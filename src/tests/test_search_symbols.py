@@ -24,7 +24,11 @@ def test_search_symbols_excludes_is_test_by_default(
     db = CodeDB(root)
     try:
         out = search_symbols(db, "format_model", limit=20)
-        assert "pkg/prod.py" in out
+        file_header = next(
+            line for line in out.splitlines() if line.startswith("pkg/prod.py")
+        )
+        assert file_header.startswith("pkg/prod.py (")
+        assert file_header.endswith("L)")
         assert "pkg.prod.format_model" in out
         assert "test_format_model" not in out
         assert "tests/" not in out

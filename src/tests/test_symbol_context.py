@@ -36,7 +36,7 @@ def test_symbol_context_excludes_test_refs_by_default(tmp_path: Path) -> None:
     root = _index(tmp_path)
     db = CodeDB(root)
     try:
-        out = get_symbol_context(db, "pkg.target.helper")
+        out = get_symbol_context(db, "pkg.target.helper", include_references=True)
         assert "pkg/user.py" in out
         assert "tests/test_target.py" not in out
     finally:
@@ -47,7 +47,9 @@ def test_symbol_context_include_tests(tmp_path: Path) -> None:
     root = _index(tmp_path)
     db = CodeDB(root)
     try:
-        out = get_symbol_context(db, "pkg.target.helper", include_tests=True)
+        out = get_symbol_context(
+            db, "pkg.target.helper", include_tests=True, include_references=True
+        )
         assert "pkg/user.py" in out
         assert "tests/test_target.py" in out
     finally:

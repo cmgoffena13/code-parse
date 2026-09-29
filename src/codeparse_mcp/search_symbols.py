@@ -8,6 +8,7 @@ SELECT
     s.qualified_name,
     s.line_count,
     f.path AS path,
+    f.line_count AS file_line_count,
     bm25(symbols_fts) AS rank
 FROM symbols_fts
 INNER JOIN symbols AS s
@@ -40,8 +41,9 @@ def search_symbols(
     Search indexed symbols via ``symbols_fts`` (qualified_name, signature,
     docstring). Repo-wide only — use ``get_file_overview`` to map one file.
 
-    Returns ranked hits grouped by file with ``qualified_name`` and line count
-    for follow-up with ``get_symbol_context``. By default skips symbols in
+    Returns ranked hits grouped by file. Each file header includes that file's
+    line count, and each hit includes ``qualified_name`` and line count for
+    follow-up with ``get_symbol_context``. By default skips symbols in
     ``is_test`` files; pass ``include_tests=True`` to search those too.
     """
     stripped = query.strip()
@@ -75,7 +77,11 @@ def search_symbols(
     for path_index, (path, sym_rows) in enumerate(by_path.items()):
         if path_index > 0:
             lines.append("")
-        lines.append(path or "(unknown path)")
+        header = path or "(unknown path)"
+        file_n = int(sym_rows[0]["file_line_count"] or 0)
+        if file_n:
+            header = f"{header} ({file_n}L)"
+        lines.append(header)
         for row in sym_rows:
             qn = (row["qualified_name"] or "").strip()
             if not qn:
