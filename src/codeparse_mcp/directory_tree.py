@@ -1,24 +1,25 @@
 from collections import defaultdict
 
+from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
 _TREE_SQL = """
-SELECT 
-    'directory' AS row_type, 
-    id, 
-    parent_id AS parent_id, 
-    name, 
-    NULL AS line_count, 
+SELECT
+    'directory' AS row_type,
+    id,
+    parent_id AS parent_id,
+    name,
+    NULL AS line_count,
     NULL AS symbol_count
 FROM directories
 UNION ALL
-SELECT 
-    'file' AS row_type, 
-    id, 
-    directory_id AS parent_id, 
-    name, 
-    line_count, 
-    symbol_count 
+SELECT
+    'file' AS row_type,
+    id,
+    directory_id AS parent_id,
+    name,
+    line_count,
+    symbol_count
 FROM files
 """
 
@@ -52,7 +53,12 @@ def _lines_under_parent(children_by_parent_id, parent_key, branch_prefix):
     return lines
 
 
-def get_directory_tree(db: CodeDB) -> str:
+def get_directory_tree(db: CodeDB, path: str | None = None) -> str:
+    """
+    Return the indexed directory/file tree with line and symbol counts.
+
+    Optional ``path`` scopes to one indexed directory (exact path).
+    """
     children_by_parent_id = defaultdict(list)
     for row in db.connection.execute(_TREE_SQL):
         is_directory = row["row_type"] == "directory"
@@ -61,7 +67,30 @@ def get_directory_tree(db: CodeDB) -> str:
         sibling_list.sort(
             key=lambda item: (not item[0], item[1]["name"].lower()),
         )
-    body_lines = _lines_under_parent(children_by_parent_id, None, "")
+
+    root_key = None
+    root_label = "."
+    if path and path.strip():
+        try:
+            scoped = normalize_repo_file_path(path, db.root).rstrip("/")
+        except ValueError as exc:
+            return str(exc)
+        if scoped not in ("", "."):
+            dir_row = db.connection.execute(
+                "SELECT id, path FROM directories WHERE path = ?",
+                (scoped,),
+            ).fetchone()
+            if dir_row is None:
+                return (
+                    f"No indexed directory matches {scoped!r}. "
+                    f"Use a directory path from ``find_paths`` (not a file)."
+                )
+            root_key = dir_row["id"]
+            root_label = f"{dir_row['path']}/"
+
+    body_lines = _lines_under_parent(children_by_parent_id, root_key, "")
     if not body_lines:
-        return "."
-    return "Legend: L = Lines, S = Symbols\n\n" + ".\n" + "\n".join(body_lines)
+        return root_label.rstrip("/") or "."
+    return (
+        "Legend: L = Lines, S = Symbols\n\n" + root_label + "\n" + "\n".join(body_lines)
+    )

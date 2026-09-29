@@ -12,3 +12,11 @@ Python codebase indexer exposed as an MCP server via the `codeparse` CLI.
 ## Claude Skill
 
 Use `codeparse --create-skill` to write `.claude/skills/codeparse/SKILL.md`. The skill steers Claude to prefer the MCP tools — orient with the tree, search by `qualified_name`, then pull symbol context — instead of reading or grepping the entire codebase.
+
+## Benchmark
+
+Ten Questions found in `eval/tasks.json` are evaluated against a baseline agent and an agent with the MCP server.
+
+`make eval-smoke` will run all 10 questions and evaluate.
+
+`make eval` will run all 10 questions on repeat (10 times) and evaluate.

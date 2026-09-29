@@ -12,6 +12,7 @@ SELECT
     symbol_count
 FROM files
 WHERE lower(path) GLOB lower(?)
+{test_filter}
 ORDER BY path
 LIMIT ?
 """
@@ -42,12 +43,17 @@ def _normalize_glob(pattern: str) -> str:
     return raw
 
 
-def find_paths(db: CodeDB, pattern: str, limit: int = 50) -> str:
+def find_paths(
+    db: CodeDB, pattern: str, limit: int = 50, *, include_tests: bool = False
+) -> str:
     """
     Match indexed file and directory paths against a glob-style ``pattern``.
 
     Examples: ``*dialect*``, ``sqlmesh/core/*.py``, ``**/cli/main.py``.
     Does not search file contents — use ``search_symbols`` for that.
+
+    By default skips ``is_test`` files. Pass ``include_tests=True`` to include
+    them. Directories are always matched.
     """
     glob = _normalize_glob(pattern)
     if not glob:
@@ -55,7 +61,12 @@ def find_paths(db: CodeDB, pattern: str, limit: int = 50) -> str:
 
     cap = max(1, min(int(limit), _MAX_RESULTS))
     # Fetch up to cap from each table, then merge/sort/truncate.
-    file_rows = list(db.connection.execute(_FILES_SQL, (glob, cap)))
+    file_rows = list(
+        db.connection.execute(
+            _FILES_SQL.format(test_filter="" if include_tests else "  AND is_test = 0"),
+            (glob, cap),
+        )
+    )
     dir_rows = list(db.connection.execute(_DIRS_SQL, (glob, cap)))
     rows = sorted(
         [*dir_rows, *file_rows],

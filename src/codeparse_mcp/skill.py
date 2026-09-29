@@ -24,12 +24,14 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 | "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` |
 | "Who imports module M?" | `find_importers` (file path) |
 | Lost in an unfamiliar repo (no path hint) | `get_directory_tree` **once**, then stop |
+| Local layout under a known directory | `find_paths` → `get_directory_tree(path=…)` |
 
 ## Workflow details
 
 ### find_paths
 - Glob-style match over indexed paths (not file contents).
 - Use before ``search_symbols`` when the clue is a filename or directory.
+- Defaults to skipping ``is_test`` files; set ``include_tests`` when you need them.
 
 ### search_symbols → get_symbol_context
 - Prefer specific terms from the request.
@@ -54,8 +56,9 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
   ``include_tests`` when you need them.
 
 ### get_directory_tree
-- Full-repo layout with line/symbol counts.
-- Only when you truly lack a map and the user did not name a path.
+- Layout with line/symbol counts. Omit ``path`` only when you lack any map.
+- When ``find_paths`` returns a directory, pass that exact path to scope the
+  tree to that branch — never dump the full repo after you already have a path.
 - Never call it repeatedly in one task.
 
 ## Rules

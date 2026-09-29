@@ -1,6 +1,4 @@
-"""
-Test Run the Parser.
-"""
+"""Smoke-print MCP tool outputs against the eval SQLMesh checkout."""
 
 from pathlib import Path
 
@@ -13,7 +11,8 @@ from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
 from src.processor import CodeProcessor
 
-PROJECT_ROOT = Path(__file__).resolve().parent
+REPO_ROOT = Path(__file__).resolve().parent
+SQLMESH_ROOT = REPO_ROOT / "eval" / "cache" / "sqlmesh"
 
 _BANNER_WIDTH = 40
 
@@ -26,28 +25,35 @@ def _banner(title: str) -> str:
     return f"{'-' * left}{label}{'-' * right}"
 
 
-def main():
-    db = CodeDB(PROJECT_ROOT)
-    processor = CodeProcessor(db, PROJECT_ROOT)
+def _print_section(title: str, body: str) -> None:
+    print(_banner(title))
+    print(body)
+    print(f"[{len(body):,} chars / {body.count(chr(10)) + 1} lines]\n")
+
+
+def main() -> None:
+    if not SQLMESH_ROOT.is_dir():
+        raise SystemExit(
+            f"Missing {SQLMESH_ROOT}; run an eval smoke first to clone sqlmesh."
+        )
+
+    db = CodeDB(SQLMESH_ROOT)
+    processor = CodeProcessor(db, SQLMESH_ROOT)
     processor.process(full=True)
-    print(_banner("DIRECTORY TREE"))
-    print(get_directory_tree(db))
-    print("\n")
-    print(_banner("FIND PATHS"))
-    print(find_paths(db, "*db*"))
-    print("\n")
-    print(_banner("FILE OVERVIEW"))
-    print(get_file_overview(db, "src/db.py"))
-    print("\n")
-    print(_banner("SEARCH SYMBOLS"))
-    print(search_symbols(db, "git"))
-    print("\n")
-    print(_banner("SYMBOL CONTEXT"))
-    print(get_symbol_context(db, "src.git_utils.path_spec_for_indexing"))
-    print("\n")
-    print(_banner("FIND IMPORTERS"))
-    print(find_importers(db, "src/db.py"))
-    print("\n")
+
+    _print_section("DIRECTORY TREE", get_directory_tree(db, "sqlmesh/core/"))
+    _print_section("FIND PATHS", find_paths(db, "*dialect*"))
+    _print_section("FILE OVERVIEW", get_file_overview(db, "sqlmesh/core/dialect.py"))
+    _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
+    _print_section(
+        "SEARCH IN FILE",
+        search_symbols(db, "format", file_path="sqlmesh/core/dialect.py"),
+    )
+    _print_section(
+        "SYMBOL CONTEXT",
+        get_symbol_context(db, "sqlmesh.core.dialect.format_model_expressions"),
+    )
+    _print_section("FIND IMPORTERS", find_importers(db, "sqlmesh/core/dialect.py"))
 
 
 if __name__ == "__main__":

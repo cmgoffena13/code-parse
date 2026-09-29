@@ -22,6 +22,12 @@ def _index(root: Path) -> None:
     (pkg / "cli_main.py").write_text(
         "def main() -> None:\n    pass\n", encoding="utf-8"
     )
+    tests = root / "tests"
+    tests.mkdir()
+    (tests / "test_dialect.py").write_text(
+        "def test_format_model() -> None:\n    pass\n",
+        encoding="utf-8",
+    )
     db = CodeDB(root)
     CodeProcessor(db, root).process()
     db.close()
@@ -41,6 +47,18 @@ def test_find_paths_substring(tmp_path: Path) -> None:
         out = find_paths(db, "dialect")
         assert "pkg/core/dialect.py" in out
         assert "other.py" not in out
+        assert "tests/test_dialect.py" not in out
+    finally:
+        db.close()
+
+
+def test_find_paths_include_tests(tmp_path: Path) -> None:
+    _index(tmp_path)
+    db = CodeDB(tmp_path)
+    try:
+        out = find_paths(db, "dialect", include_tests=True)
+        assert "pkg/core/dialect.py" in out
+        assert "tests/test_dialect.py" in out
     finally:
         db.close()
 

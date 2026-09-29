@@ -52,20 +52,26 @@ def _processor(ctx: Context) -> CodeProcessor:
 
 
 @mcp.tool()
-def get_directory_tree(ctx: Context) -> str:
-    """Return the FULL indexed directory/file tree with line and symbol counts.
+def get_directory_tree(ctx: Context, path: str | None = None) -> str:
+    """Return the indexed directory/file tree with line and symbol counts.
+    Optional ``path`` scopes to one indexed directory (exact path from
+    ``find_paths``). Prefer ``find_paths`` first, then pass the directory here
+    instead of dumping the full repo.
     If the user already named a package or file, call ``get_file_overview`` or ``search_symbols`` instead.
     Do not call this repeatedly in one task."""
-    return _processor(ctx).run_query(run_directory_tree)
+    return _processor(ctx).run_query(lambda db: run_directory_tree(db, path=path))
 
 
 @mcp.tool()
-def find_paths(pattern: str, ctx: Context, limit: int = 50) -> str:
+def find_paths(
+    pattern: str, ctx: Context, limit: int = 50, include_tests: bool = False
+) -> str:
     """Find indexed file/directory paths by glob-style pattern (e.g. ``*dialect*``,
     ``sqlmesh/core/*.py``). Prefer this over ``get_directory_tree`` when hunting
-    for a path. Does not search file contents. Do not call this repeatedly in one task."""
+    for a path. By default excludes ``is_test`` files; set ``include_tests`` to
+    include them. Does not search file contents."""
     return _processor(ctx).run_query(
-        lambda db: run_find_paths(db, pattern, limit=limit)
+        lambda db: run_find_paths(db, pattern, limit=limit, include_tests=include_tests)
     )
 
 

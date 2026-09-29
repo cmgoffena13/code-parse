@@ -1,9 +1,7 @@
 from collections import defaultdict
 
-from src.codeparse_mcp.clip import clip
 from src.db import CodeDB
 
-_MAX_REFERENCE_CONTEXT = 150
 _REFERENCE_FETCH_LIMIT = 50
 
 _SYMBOL_ROW_SQL = """
@@ -24,7 +22,6 @@ _REFERENCES_SQL = """
 SELECT
     f.path AS source_path,
     sr.source_line,
-    sr.context,
     sr.ref_kind
 FROM symbol_references AS sr
 INNER JOIN files AS f
@@ -47,11 +44,6 @@ def _lines_range_header(line_start: int, line_end: int) -> str:
     if line_start == line_end:
         return str(line_start)
     return f"{line_start}-{line_end}"
-
-
-def _format_reference_context(text: str, max_len: int = _MAX_REFERENCE_CONTEXT) -> str:
-    t = text.replace("\n", " ").strip()
-    return clip(t, max_len)
 
 
 def _definition_gutter_width(line_start: int, line_count: int) -> int:
@@ -136,8 +128,7 @@ def get_symbol_context(
         lines.append("")
         lines.append(f"{heading} ({len(items)})")
         for r in items:
-            ctx = _format_reference_context(r["context"] or "")
-            lines.append(f"  • {r['source_path']}:{r['source_line']} - {ctx}")
+            lines.append(f"  • {r['source_path']}:{r['source_line']}")
 
     for kind in sorted(by_kind.keys()):
         if kind in covered:
@@ -149,7 +140,6 @@ def get_symbol_context(
         lines.append("")
         lines.append(f"## {title} ({len(items)})")
         for r in items:
-            ctx = _format_reference_context(r["context"] or "")
-            lines.append(f"  • {r['source_path']}:{r['source_line']} - {ctx}")
+            lines.append(f"  • {r['source_path']}:{r['source_line']}")
 
     return "\n".join(lines) + "\n"
