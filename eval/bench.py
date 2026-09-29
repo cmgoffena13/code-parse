@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Token-usage benchmark: codeparse MCP vs read/grep on a pinned SQLMesh checkout.
+"""Token-usage benchmark: codeparse MCP (+ built-ins) vs read/grep on a pinned SQLMesh checkout.
 
 Supports --provider cursor (Cursor SDK) or claude (Claude Agent SDK).
 """
@@ -43,7 +43,7 @@ Do not invent paths. Prefer precise qualified names when the tools provide them.
 
 CURSOR_DISALLOWED = ["shell", "task", "webSearch", "edit"]
 
-# Claude Code built-ins that would break a fair read/grep or MCP-only baseline.
+# Claude Code built-ins that would break a fair read/grep baseline.
 CLAUDE_DISALLOWED_WRITE = [
     "Bash",
     "Write",
@@ -56,7 +56,8 @@ CLAUDE_DISALLOWED_WRITE = [
     "Skill",
     "SlashCommand",
 ]
-CLAUDE_DISALLOWED_READ = ["Read", "Grep", "Glob", "LS"]
+CURSOR_BASELINE_TOOLS = ["read", "grep", "glob", "ls"]
+CLAUDE_BASELINE_TOOLS = ["Read", "Grep", "Glob", "LS"]
 
 
 def _load_tasks() -> dict[str, Any]:
@@ -171,8 +172,10 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     if arm == "codeparse":
         parts.insert(
             0,
-            "Use only the codeparse MCP tools (follow this skill). "
-            "Do not invent file contents.\n\n" + SKILL_INSTRUCTIONS,
+            "You have the usual read/grep/glob/ls tools plus the codeparse MCP "
+            "server. Prefer codeparse tools when they fit (follow this skill); "
+            "otherwise use the built-ins. Do not invent file contents.\n\n"
+            + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
@@ -371,7 +374,7 @@ def run_cursor_agent(
         options = AgentOptions(
             model=model,
             api_key=api_key,
-            tools=["read", "grep", "glob", "ls"],
+            tools=CURSOR_BASELINE_TOOLS,
             disallowed_tools=CURSOR_DISALLOWED,
             local=LocalAgentOptions(cwd=str(sqlmesh), setting_sources=[]),
         )
@@ -379,7 +382,7 @@ def run_cursor_agent(
         options = AgentOptions(
             model=model,
             api_key=api_key,
-            tools=["mcp"],
+            tools=[*CURSOR_BASELINE_TOOLS, "mcp"],
             disallowed_tools=CURSOR_DISALLOWED,
             mcp_servers={
                 "codeparse": StdioMcpServerConfig(
@@ -437,8 +440,8 @@ async def _run_claude_query(
         options = ClaudeAgentOptions(
             model=model,
             cwd=str(sqlmesh),
-            tools=["Read", "Grep", "Glob", "LS"],
-            allowed_tools=["Read", "Grep", "Glob", "LS"],
+            tools=CLAUDE_BASELINE_TOOLS,
+            allowed_tools=CLAUDE_BASELINE_TOOLS,
             disallowed_tools=CLAUDE_DISALLOWED_WRITE,
             permission_mode="bypassPermissions",
             setting_sources=[],
@@ -448,14 +451,15 @@ async def _run_claude_query(
         options = ClaudeAgentOptions(
             model=model,
             cwd=str(sqlmesh),
+            tools=CLAUDE_BASELINE_TOOLS,
             mcp_servers={
                 "codeparse": {
                     "command": "uv",
                     "args": _mcp_server_args(sqlmesh),
                 }
             },
-            allowed_tools=["mcp__codeparse__*"],
-            disallowed_tools=CLAUDE_DISALLOWED_WRITE + CLAUDE_DISALLOWED_READ,
+            allowed_tools=[*CLAUDE_BASELINE_TOOLS, "mcp__codeparse__*"],
+            disallowed_tools=CLAUDE_DISALLOWED_WRITE,
             permission_mode="bypassPermissions",
             setting_sources=[],
             strict_mcp_config=True,

@@ -5,7 +5,6 @@ from pathlib import Path
 from src.codeparse_mcp.directory_tree import get_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview
 from src.codeparse_mcp.find_importers import find_importers
-from src.codeparse_mcp.find_paths import find_paths
 from src.codeparse_mcp.search_symbols import search_symbols
 from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
@@ -42,7 +41,6 @@ def main() -> None:
     processor.process(full=True)
 
     _print_section("DIRECTORY TREE", get_directory_tree(db, "sqlmesh/core/"))
-    _print_section("FIND PATHS", find_paths(db, "*dialect*"))
     _print_section("FILE OVERVIEW", get_file_overview(db, "sqlmesh/core/dialect.py"))
     _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
     _print_section(

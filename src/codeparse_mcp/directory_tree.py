@@ -83,7 +83,7 @@ def get_directory_tree(db: CodeDB, path: str | None = None) -> str:
             if dir_row is None:
                 return (
                     f"No indexed directory matches {scoped!r}. "
-                    f"Use a directory path from ``find_paths`` (not a file)."
+                    f"Use a directory path from ``glob`` / the index (not a file)."
                 )
             root_key = dir_row["id"]
             root_label = f"{dir_row['path']}/"

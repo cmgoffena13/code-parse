@@ -4,7 +4,7 @@ SKILL_INSTRUCTIONS = """\
 ---
 name: codeparse
 description: Use the codeparse MCP Server effectively.
-allowed-tools: get_directory_tree find_paths get_file_overview search_symbols get_symbol_context find_importers
+allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers
 ---
 
 ## Identifiers

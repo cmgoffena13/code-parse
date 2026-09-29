@@ -9,7 +9,6 @@ from mcp.server.mcpserver import Context, MCPServer
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
-from src.codeparse_mcp.find_paths import find_paths as run_find_paths
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
@@ -54,25 +53,11 @@ def _processor(ctx: Context) -> CodeProcessor:
 @mcp.tool()
 def get_directory_tree(ctx: Context, path: str | None = None) -> str:
     """Return the indexed directory/file tree with line and symbol counts.
-    Optional ``path`` scopes to one indexed directory (exact path from
-    ``find_paths``). Prefer ``find_paths`` first, then pass the directory here
-    instead of dumping the full repo.
+    Optional ``path`` scopes to one indexed directory (exact path). Prefer
+    ``glob`` first, then pass the directory here instead of dumping the full repo.
     If the user already named a package or file, call ``get_file_overview`` or ``search_symbols`` instead.
     Do not call this repeatedly in one task."""
     return _processor(ctx).run_query(lambda db: run_directory_tree(db, path=path))
-
-
-@mcp.tool()
-def find_paths(
-    pattern: str, ctx: Context, limit: int = 50, include_tests: bool = False
-) -> str:
-    """Find indexed file/directory paths by glob-style pattern (e.g. ``*dialect*``,
-    ``sqlmesh/core/*.py``). Prefer this over ``get_directory_tree`` when hunting
-    for a path. By default excludes ``is_test`` files; set ``include_tests`` to
-    include them. Does not search file contents."""
-    return _processor(ctx).run_query(
-        lambda db: run_find_paths(db, pattern, limit=limit, include_tests=include_tests)
-    )
 
 
 @mcp.tool()
