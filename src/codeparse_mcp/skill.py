@@ -16,15 +16,12 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 
 ## Pick the narrowest tool
 
-Do **not** start every question with `get_directory_tree`. That tool returns the
-**entire** repo and is expensive on large codebases. Prefer:
-
 | Question type | Tool |
 | --- | --- |
 | Known file / package API (`__init__.py`, public exports) | `get_file_overview` on that path |
 | "Where is X defined?" / keyword hunt | `search_symbols` → `get_symbol_context` |
 | "Who calls / references symbol S?" | `search_symbols` → `get_symbol_context` |
-| "Who imports module M?" | `find_importers` (repo-relative path) |
+| "Who imports module M?" | `find_importers` (file path) |
 | Lost in an unfamiliar repo (no path hint) | `get_directory_tree` **once**, then stop |
 
 ## Workflow details
@@ -38,12 +35,10 @@ Do **not** start every question with `get_directory_tree`. That tool returns the
 - One file's imports + symbol tree (each node has `qualified_name`).
 - Best for package surfaces: e.g. `sqlmesh/core/model/__init__.py`, not the
   whole tree plus every sibling module.
-- `file_path` is relative to the index root with POSIX slashes.
 
 ### find_importers
-- Fan-in for a module file. Pass the same path style as `get_file_overview`
-  (`pkg/mod.py`).
-- Do not discover importers by sampling `get_file_overview` across files.
+- Fan-in for a module file. 
+- Use to discover importers instead of sampling `get_file_overview` across files.
 
 ### get_directory_tree
 - Full-repo layout with line/symbol counts.

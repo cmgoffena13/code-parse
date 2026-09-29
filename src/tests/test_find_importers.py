@@ -62,6 +62,6 @@ def test_find_importers_missing_target(indexed_import_pair: Path) -> None:
 def test_find_importers_empty_input(indexed_import_pair: Path) -> None:
     db = CodeDB(indexed_import_pair)
     try:
-        assert "No file path given" in find_importers(db, "  ")
+        assert "file_path is empty" in find_importers(db, "  ")
     finally:
         db.close()

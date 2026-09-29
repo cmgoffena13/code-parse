@@ -11,6 +11,7 @@ import os
 import statistics
 import subprocess
 import sys
+from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -169,8 +170,9 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     if arm == "codeparse":
         parts.insert(
             0,
-            "You must use the codeparse MCP tools. Follow this skill:\n\n"
-            + SKILL_INSTRUCTIONS,
+            "Prefer the codeparse MCP tools (follow this skill). "
+            "You may also use read for specific line ranges when a tool "
+            "gives you line numbers. \n\n" + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
@@ -180,14 +182,43 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     return "\n\n".join(parts)
 
 
-def _count_cursor_tool_calls(run: Any) -> int:
+def _tool_name_from_mapping(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    # Cursor toolCall.message: {"type": "grep", "args": ..., "result": ...}
+    # MCP wraps as {"type": "mcp", "args": {"toolName": "search_symbols", ...}}
+    typ = payload.get("type")
+    if not isinstance(typ, str) or not typ.strip():
+        return None
+    typ = typ.strip()
+    if typ == "mcp":
+        args = payload.get("args")
+        if isinstance(args, dict):
+            tool = args.get("toolName")
+            if isinstance(tool, str) and tool.strip():
+                return tool.strip()
+    return typ
+
+
+def _normalize_tool_name(name: str) -> str:
+    prefix = "mcp__codeparse__"
+    if name.startswith(prefix):
+        return name[len(prefix) :]
+    return name
+
+
+def _sorted_tool_counts(counts: Counter[str]) -> dict[str, int]:
+    return dict(sorted(counts.items()))
+
+
+def _cursor_tool_usage(run: Any) -> dict[str, int]:
     from cursor_sdk.types import AgentConversationTurn, ToolCallConversationStep
 
     try:
         turns = run.conversation()
     except Exception:  # noqa: BLE001 — conversation may be unavailable
-        return 0
-    count = 0
+        return {}
+    counts: Counter[str] = Counter()
     for wrap in turns:
         turn = getattr(wrap, "turn", wrap)
         steps = getattr(turn, "steps", None)
@@ -202,9 +233,14 @@ def _count_cursor_tool_calls(run: Any) -> int:
             )
             if not is_tool and isinstance(step, dict):
                 is_tool = step.get("type") == "toolCall"
-            if is_tool:
-                count += 1
-    return count
+            if not is_tool:
+                continue
+            message = getattr(step, "message", None)
+            if message is None and isinstance(step, dict):
+                message = step.get("message")
+            name = _normalize_tool_name(_tool_name_from_mapping(message) or "unknown")
+            counts[name] += 1
+    return _sorted_tool_counts(counts)
 
 
 def run_cursor_agent(
@@ -214,7 +250,7 @@ def run_cursor_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
     from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
     from cursor_sdk.types import StdioMcpServerConfig
 
@@ -230,7 +266,7 @@ def run_cursor_agent(
         options = AgentOptions(
             model=model,
             api_key=api_key,
-            tools=["mcp"],
+            tools=["mcp", "read"],
             disallowed_tools=CURSOR_DISALLOWED,
             mcp_servers={
                 "codeparse": StdioMcpServerConfig(
@@ -254,8 +290,14 @@ def run_cursor_agent(
             result.usage if result.usage is not None else run.usage
         )
         run_id = getattr(result, "id", None) or getattr(run, "id", None)
-        tool_calls = _count_cursor_tool_calls(run)
-        return text, str(run_id) if run_id else None, usage, str(status), tool_calls
+        tools_used = _cursor_tool_usage(run)
+        return (
+            text,
+            str(run_id) if run_id else None,
+            usage,
+            str(status),
+            tools_used,
+        )
 
 
 async def _run_claude_query(
@@ -264,7 +306,7 @@ async def _run_claude_query(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
     from claude_agent_sdk import (
         AssistantMessage,
         ClaudeAgentOptions,
@@ -295,8 +337,9 @@ async def _run_claude_query(
                     "args": _mcp_server_args(sqlmesh),
                 }
             },
-            allowed_tools=["mcp__codeparse__*"],
-            disallowed_tools=CLAUDE_DISALLOWED_WRITE + CLAUDE_DISALLOWED_READ,
+            allowed_tools=["mcp__codeparse__*", "Read"],
+            disallowed_tools=CLAUDE_DISALLOWED_WRITE
+            + [t for t in CLAUDE_DISALLOWED_READ if t != "Read"],
             permission_mode="bypassPermissions",
             setting_sources=[],
             strict_mcp_config=True,
@@ -309,7 +352,7 @@ async def _run_claude_query(
     session_id: str | None = None
     status = "finished"
     result_text = ""
-    tool_calls = 0
+    tool_counts: Counter[str] = Counter()
     num_turns: int | None = None
 
     async for message in query(prompt=prompt, options=options):
@@ -318,7 +361,7 @@ async def _run_claude_query(
                 if isinstance(block, TextBlock):
                     text_parts.append(block.text)
                 elif isinstance(block, ToolUseBlock):
-                    tool_calls += 1
+                    tool_counts[_normalize_tool_name(block.name or "unknown")] += 1
         elif isinstance(message, ResultMessage):
             session_id = message.session_id
             usage = _claude_usage_dict(
@@ -336,7 +379,7 @@ async def _run_claude_query(
         usage = {**usage, "num_turns": num_turns}
 
     text = result_text or "\n".join(text_parts)
-    return text, session_id, usage, status, tool_calls
+    return text, session_id, usage, status, _sorted_tool_counts(tool_counts)
 
 
 def run_claude_agent(
@@ -345,7 +388,7 @@ def run_claude_agent(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
     return asyncio.run(
         _run_claude_query(arm=arm, prompt=prompt, model=model, sqlmesh=sqlmesh)
     )
@@ -359,7 +402,7 @@ def run_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[str, str | None, dict[str, Any] | None, str, int]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int]]:
     if provider == "cursor":
         return run_cursor_agent(
             arm=arm, prompt=prompt, model=model, api_key=api_key, sqlmesh=sqlmesh
@@ -412,10 +455,14 @@ def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, 
         if r.get("usage") and r["usage"].get("cache_read_tokens") is not None
     ]
     pass_tools = [
-        int(r["tool_calls"]) for r in passes if r.get("tool_calls") is not None
+        sum(int(v) for v in r["tools_used"].values())
+        for r in passes
+        if isinstance(r.get("tools_used"), dict)
     ]
     all_tools = [
-        int(r["tool_calls"]) for r in arm_rows if r.get("tool_calls") is not None
+        sum(int(v) for v in r["tools_used"].values())
+        for r in arm_rows
+        if isinstance(r.get("tools_used"), dict)
     ]
     return {
         "n": len(arm_rows),
@@ -594,7 +641,7 @@ def main(argv: list[str] | None = None) -> int:
                         f"arm={arm} repeat={repeat}"
                     )
                     try:
-                        text, run_id, usage, status, tool_calls = run_agent(
+                        text, run_id, usage, status, tools_used = run_agent(
                             provider=provider,
                             arm=arm,
                             prompt=prompt,
@@ -603,7 +650,7 @@ def main(argv: list[str] | None = None) -> int:
                             sqlmesh=sqlmesh,
                         )
                     except Exception as exc:  # noqa: BLE001 — keep going
-                        text, run_id, usage, status, tool_calls = (
+                        text, run_id, usage, status, tools_used = (
                             "",
                             None,
                             None,
@@ -625,7 +672,7 @@ def main(argv: list[str] | None = None) -> int:
                         "status": status,
                         "run_id": run_id,
                         "usage": usage,
-                        "tool_calls": tool_calls,
+                        "tools_used": tools_used,
                         "answer": text,
                         "model": model,
                         "sqlmesh_sha": catalog["sha"],
@@ -636,7 +683,7 @@ def main(argv: list[str] | None = None) -> int:
                     print(
                         f"  status={status} passed={passed} "
                         f"total={None if not usage else usage.get('total_tokens')} "
-                        f"tools={tool_calls} "
+                        f"tools_used={tools_used} "
                         f"missing={missing}"
                     )
 

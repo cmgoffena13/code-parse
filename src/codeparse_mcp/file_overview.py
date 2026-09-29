@@ -1,6 +1,7 @@
 from collections import defaultdict
 
 from src.codeparse_mcp.clip import clipped_doc_lines
+from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
 _SYMBOLS_SQL = """
@@ -91,16 +92,21 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     ``Doc`` lines) and imports (source line + statement text) for one file.
 
     Each symbol line uses ``qualified_name`` so callers can pass it to
-    ``get_symbol_context``. ``file_path`` must match ``files.path`` for the index
-    (POSIX path relative to the index root, e.g. ``pkg/mod.py``).
+    ``get_symbol_context``. ``file_path`` is normalized to a POSIX path relative
+    to the index root (e.g. ``pkg/mod.py``).
     """
+    try:
+        path = normalize_repo_file_path(file_path, db.root)
+    except ValueError as exc:
+        return str(exc)
+
     file_row = db.connection.execute(
         "SELECT id, path, language, line_count FROM files WHERE path = ?",
-        (file_path,),
+        (path,),
     ).fetchone()
     if file_row is None:
         return (
-            f"No indexed file matches {file_path!r}. "
+            f"No indexed file matches {path!r}. "
             f"Use the local path as stored in the index (relative to {db.root})."
         )
 

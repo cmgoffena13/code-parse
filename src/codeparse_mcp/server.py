@@ -17,13 +17,7 @@ from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
 codeparse tools read an up-to-date SQLite code index. The index is automatically refreshed
-incrementally on every tool call to reflect recent file changes.
-Prefer these tools for code analysis over generic file reading or grep search.
-Pick the narrowest tool: known paths → get_file_overview; symbol questions →
-search_symbols → get_symbol_context; import fan-in → find_importers.
-Avoid get_directory_tree unless you lack any path hint — it dumps the entire repo.
-Symbols use ``qualified_name`` (module-prefixed for Python); copy it from tool
-output into get_symbol_context. Start the server in the repository you want to index.
+incrementally on every tool call to reflect recent file changes. Start the server in the repository you want to index.
 """
 
 
@@ -59,9 +53,7 @@ def _processor(ctx: Context) -> CodeProcessor:
 @mcp.tool()
 def get_directory_tree(ctx: Context) -> str:
     """Return the FULL indexed directory/file tree with line and symbol counts.
-    This is a large, repo-wide dump — expensive on big codebases. Use only when
-    you have no path hint and need an initial map. If the user already named a
-    package or file, call ``get_file_overview`` or ``search_symbols`` instead.
+    If the user already named a package or file, call ``get_file_overview`` or ``search_symbols`` instead.
     Do not call this repeatedly in one task."""
     return _processor(ctx).run_query(run_directory_tree)
 
@@ -69,8 +61,7 @@ def get_directory_tree(ctx: Context) -> str:
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
     """Return imports and a symbol tree for one file. Each symbol includes its
-    ``qualified_name`` for ``get_symbol_context``. ``file_path`` is relative to
-    the index root with POSIX slashes, e.g. ``src/db.py``."""
+    ``qualified_name`` for ``get_symbol_context``."""
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
@@ -79,30 +70,22 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
 def search_symbols(query: str, ctx: Context, limit: int = 20) -> str:
     """Full-text search across indexed symbols (``qualified_name``, signatures,
     docstrings). Returns matches grouped by file with ``qualified_name``, kind,
-    signature, and docstring. Pass that exact ``qualified_name`` to
-    ``get_symbol_context`` — do not use a bare name. Example queries: ``memory``,
-    ``CodeProcessor.process``, ``db_path_for_index_root``."""
+    signature, and docstring. Example queries: ``memory``, ``loader OR load``"""
     return _processor(ctx).run_query(lambda db: run_symbol_search(db, query, limit))
 
 
 @mcp.tool()
 def get_symbol_context(qualified_name: str, ctx: Context) -> str:
-    """Return the definition (source lines) and all references (calls, accesses,
-    type annotations) for one symbol. ``qualified_name`` must match
-    ``symbols.qualified_name`` exactly — copy it from ``search_symbols`` or
-    ``get_file_overview``, e.g. ``src.db.CodeDB`` or
-    ``src.processor.CodeProcessor.process``. Bare names like ``CodeDB`` will not
-    match. Includes file paths and line numbers for every reference."""
+    """Return the symbol definition (source lines) and all references (calls, accesses,
+    type annotations)."""
     name = qualified_name.strip()
     return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
 
 
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context) -> str:
-    """Return every indexed file that imports a given module file. Pass a
-    repo-relative path with POSIX slashes (``sqlmesh/core/dialect.py``) — same
-    form as ``get_file_overview``. Use for "who imports X" / dependency fan-in;
-    prefer this over sampling ``get_file_overview`` across many files."""
+    """Return every indexed file that imports a given module file.
+    Use for who-imports / dependency fan-in."""
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_find_importers(db, path))
 

@@ -2,6 +2,7 @@
 
 from collections import OrderedDict
 
+from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
 _MAX_IMPORTER_FILES = 100
@@ -29,23 +30,19 @@ ORDER BY f.path, i.line_number, i.imported_symbol
 """
 
 
-def _normalize_file_path(file_path: str) -> str:
-    return file_path.strip().replace("\\", "/")
-
-
 def find_importers(db: CodeDB, file_path: str) -> str:
     """
     List files that import the module at ``file_path``.
 
-    ``file_path`` is a repo-relative path with POSIX slashes, matching
-    ``files.path`` / ``get_file_overview`` (e.g. ``sqlmesh/core/dialect.py``).
-    Matching uses ``imports.imported_file_id`` when resolved, and
-    ``imports.import_path`` as a fallback for unresolved rows that still name
-    the module's ``normalized_path``.
+    ``file_path`` is normalized to a POSIX path relative to the index root
+    (e.g. ``sqlmesh/core/dialect.py``). Matching uses ``imports.imported_file_id``
+    when resolved, and ``imports.import_path`` as a fallback for unresolved rows
+    that still name the module's ``normalized_path``.
     """
-    path = _normalize_file_path(file_path)
-    if not path:
-        return "No file path given; pass a non-empty file_path."
+    try:
+        path = normalize_repo_file_path(file_path, db.root)
+    except ValueError as exc:
+        return str(exc)
 
     target = db.connection.execute(_RESOLVE_FILE_SQL, (path,)).fetchone()
     if target is None and not path.endswith(".py"):
