@@ -16,6 +16,22 @@ from src.parsers.factory import FILE_EXTENSION_MAPPING, ParserFactory
 T = TypeVar("T")
 
 
+def file_path_is_test(relative_path: Path) -> bool:
+    """True for conventional test layout: ``tests/`` tree, ``test_*.py``, etc.
+
+    Does not treat a package segment named ``test`` (e.g. ``core/test/``) as a
+    test suite — only the plural ``tests`` directory.
+    """
+    if "tests" in relative_path.parts:
+        return True
+    name = relative_path.name
+    if name == "conftest.py":
+        return True
+    if name.startswith("test_") and name.endswith(".py"):
+        return True
+    return name.endswith("_test.py")
+
+
 class CodeProcessor:
     def __init__(self, db: CodeDB, root: Path):
         self.db = db
@@ -103,6 +119,7 @@ class CodeProcessor:
             return
 
         lang = FILE_EXTENSION_MAPPING.get(file_extension)
+        is_test = file_path_is_test(file_relative_path)
         file_row = {
             "id": file_id,
             "directory_id": directory_id,
@@ -113,6 +130,7 @@ class CodeProcessor:
             "content_hash": file_hash,
             "line_count": line_count,
             "symbol_count": prior_symbol_count,
+            "is_test": is_test,
         }
         if not existed or prior_hash != file_hash:
             self.db_batches["files"].append(file_row)
@@ -123,6 +141,7 @@ class CodeProcessor:
             "content_hash": file_hash,
             "line_count": line_count,
             "symbol_count": prior_symbol_count,
+            "is_test": is_test,
         }
         self.files_snapshot[file_relative_path] = snap
 
@@ -147,8 +166,12 @@ class CodeProcessor:
                 file_id, file_bytes, module_qn=module_qn, is_package=is_package
             )
             n = len(symbols)
+            if any(s.get("is_test") for s in symbols):
+                is_test = True
             file_row["symbol_count"] = n
+            file_row["is_test"] = is_test
             snap["symbol_count"] = n
+            snap["is_test"] = is_test
             self.db_batches["symbols"].extend(symbols)
             self.db_batches["imports"].extend(imports)
             self.db_batches["symbol_references"].extend(references)

@@ -20,7 +20,7 @@ INNER JOIN symbols AS s
 INNER JOIN files AS f 
     ON f.id = s.file_id
 WHERE symbols_fts MATCH ?
-  AND (? = 1 OR s.is_test = 0)
+{test_filter}
 ORDER BY rank
 LIMIT ?
 """
@@ -83,8 +83,10 @@ def search_symbols(
 
     try:
         rows = db.connection.execute(
-            _SYMBOL_SEARCH_SQL,
-            (fts_query, 1 if include_tests else 0, limit),
+            _SYMBOL_SEARCH_SQL.format(
+                test_filter="" if include_tests else "  AND s.is_test = 0"
+            ),
+            (fts_query, limit),
         ).fetchall()
     except sqlite3.OperationalError as e:
         return f"Search failed for {query!r} ({fts_query!r}): {e}"

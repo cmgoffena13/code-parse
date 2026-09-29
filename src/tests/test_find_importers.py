@@ -27,6 +27,12 @@ def indexed_import_pair(tmp_path: Path) -> Path:
         "from pkg.target import helper as h\n",
         encoding="utf-8",
     )
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "test_target.py").write_text(
+        "from pkg.target import helper\n\n\ndef test_helper() -> None:\n    assert helper() == 1\n",
+        encoding="utf-8",
+    )
     db = CodeDB(tmp_path)
     CodeProcessor(db, tmp_path).process()
     db.close()
@@ -40,12 +46,26 @@ def test_find_importers_by_path(indexed_import_pair: Path) -> None:
 
         assert "pkg/importer.py" in by_path
         assert "other.py" in by_path
-        assert "helper" in by_path or "1S" in by_path
+        assert "helper" in by_path
         assert "Importers of pkg/target.py" in by_path
+        assert "Legend:" not in by_path
+        assert "1S" not in by_path
+        assert "pkg/importer.py:" in by_path
+        assert " — " in by_path
+        assert "tests/test_target.py" not in by_path
 
-        # Dotted modules are not accepted — path only.
         dotted = find_importers(db, "pkg.target")
         assert "No indexed file matches" in dotted
+    finally:
+        db.close()
+
+
+def test_find_importers_include_tests(indexed_import_pair: Path) -> None:
+    db = CodeDB(indexed_import_pair)
+    try:
+        out = find_importers(db, "pkg/target.py", include_tests=True)
+        assert "pkg/importer.py" in out
+        assert "tests/test_target.py" in out
     finally:
         db.close()
 

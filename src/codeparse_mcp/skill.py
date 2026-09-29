@@ -45,6 +45,8 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 ### find_importers
 - Fan-in for a module file. 
 - Use to discover importers instead of sampling `get_file_overview` across files.
+- Defaults to skipping importer files with ``is_test`` symbols; only set
+  ``include_tests`` when you need them.
 
 ### get_directory_tree
 - Full-repo layout with line/symbol counts.

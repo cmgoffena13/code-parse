@@ -686,6 +686,7 @@ def main(argv: list[str] | None = None) -> int:
                         f"tools_used={tools_used} "
                         f"missing={missing}"
                     )
+            print()
 
     print(f"\nWrote {out_path}")
     summary = summarize(rows)

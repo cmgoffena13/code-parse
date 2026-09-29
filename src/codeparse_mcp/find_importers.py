@@ -24,13 +24,13 @@ SELECT
 FROM imports AS i
 INNER JOIN files AS f
     ON f.id = i.file_id
-WHERE i.imported_file_id = ?
-   OR i.import_path = ?
+WHERE (i.imported_file_id = ? OR i.import_path = ?)
+{test_filter}
 ORDER BY f.path, i.line_number, i.imported_symbol
 """
 
 
-def find_importers(db: CodeDB, file_path: str) -> str:
+def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -> str:
     """
     List files that import the module at ``file_path``.
 
@@ -38,6 +38,9 @@ def find_importers(db: CodeDB, file_path: str) -> str:
     (e.g. ``sqlmesh/core/dialect.py``). Matching uses ``imports.imported_file_id``
     when resolved, and ``imports.import_path`` as a fallback for unresolved rows
     that still name the module's ``normalized_path``.
+
+    By default skips importer files marked ``is_test``. Pass
+    ``include_tests=True`` to include them.
     """
     try:
         path = normalize_repo_file_path(file_path, db.root)
@@ -58,55 +61,42 @@ def find_importers(db: CodeDB, file_path: str) -> str:
     target_path = target["path"]
     target_dotted = target["normalized_path"]
 
-    rows = list(db.connection.execute(_IMPORTERS_SQL, (target_id, target_dotted)))
+    rows = list(
+        db.connection.execute(
+            _IMPORTERS_SQL.format(
+                test_filter="" if include_tests else "  AND f.is_test = 0"
+            ),
+            (target_id, target_dotted),
+        )
+    )
     if not rows:
         return f"No importers of {target_path} in the index."
 
-    # Group by importer file; within a file, collapse duplicate signatures.
-    by_file: OrderedDict[str, list] = OrderedDict()
+    # Group by importer file, then by line, collecting imported names.
+    by_file: OrderedDict[str, OrderedDict[int, list[str]]] = OrderedDict()
     for row in rows:
-        by_file.setdefault(row["importer_path"], []).append(row)
+        importer_path = row["importer_path"]
+        line_n = int(row["line_number"])
+        sym = (row["imported_symbol"] or "").strip() or "(module)"
+        lines = by_file.setdefault(importer_path, OrderedDict())
+        names = lines.setdefault(line_n, [])
+        if sym not in names:
+            names.append(sym)
 
     total_files = len(by_file)
     shown_files = list(by_file.items())[:_MAX_IMPORTER_FILES]
 
     lines_out: list[str] = [
-        "Legend: L = Lines, S = Symbols\n",
         f"Importers of {target_path} — {total_files} files",
         "",
     ]
-
-    for importer_path, file_rows in shown_files:
-        seen_sigs: set[str] = set()
-        symbols: list[str] = []
-        seen_symbols: set[str] = set()
-        stmt_lines: list[str] = []
-        for row in file_rows:
-            sig = (row["signature"] or "").strip()
-            line_n = int(row["line_number"])
-            if sig and sig not in seen_sigs:
-                seen_sigs.add(sig)
-                stmt_lines.append(f"  {sig} ({line_n}L)")
-            elif not sig:
-                key = f"{line_n}:{row['imported_symbol']}"
-                if key not in seen_sigs:
-                    seen_sigs.add(key)
-                    sym = row["imported_symbol"] or "(module)"
-                    stmt_lines.append(f"  {sym} ({line_n}L)")
-            sym = (row["imported_symbol"] or "").strip()
-            if sym and sym not in seen_symbols:
-                seen_symbols.add(sym)
-                symbols.append(sym)
-        # Match directory_tree file stats: name (NS) / (NL, NS).
-        if symbols:
-            lines_out.append(f"{importer_path} ({len(symbols)}S)")
-        else:
-            lines_out.append(importer_path)
-        lines_out.extend(stmt_lines)
-        lines_out.append("")
+    for importer_path, by_line in shown_files:
+        for line_n, names in by_line.items():
+            lines_out.append(f"{importer_path}:{line_n} — {', '.join(names)}")
 
     if total_files > _MAX_IMPORTER_FILES:
         omitted = total_files - _MAX_IMPORTER_FILES
+        lines_out.append("")
         lines_out.append(f"...[{omitted} more importer files truncated]")
 
     return "\n".join(lines_out).rstrip() + "\n"

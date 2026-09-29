@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS files (
     language        TEXT,                                          
     content_hash    TEXT NOT NULL,                               
     line_count      INTEGER NOT NULL DEFAULT 0,
-    symbol_count    INTEGER NOT NULL DEFAULT 0
+    symbol_count    INTEGER NOT NULL DEFAULT 0,
+    is_test         BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE UNIQUE INDEX IF NOT EXISTS files_normalized_path_index ON files (normalized_path);
 

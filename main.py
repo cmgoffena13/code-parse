@@ -7,6 +7,7 @@ from pathlib import Path
 from src.codeparse_mcp.directory_tree import get_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview
 from src.codeparse_mcp.find_importers import find_importers
+from src.codeparse_mcp.find_paths import find_paths
 from src.codeparse_mcp.search_symbols import search_symbols
 from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
@@ -31,6 +32,9 @@ def main():
     processor.process(full=True)
     print(_banner("DIRECTORY TREE"))
     print(get_directory_tree(db))
+    print("\n")
+    print(_banner("FIND PATHS"))
+    print(find_paths(db, "*db*"))
     print("\n")
     print(_banner("FILE OVERVIEW"))
     print(get_file_overview(db, "src/db.py"))
