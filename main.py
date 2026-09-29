@@ -47,7 +47,11 @@ def main() -> None:
     _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
     _print_section(
         "SYMBOL CONTEXT",
-        get_symbol_context(db, "sqlmesh.core.dialect.format_model_expressions"),
+        get_symbol_context(
+            db,
+            "sqlmesh.core.dialect.format_model_expressions",
+            include_references=False,
+        ),
     )
     _print_section("FIND IMPORTERS", find_importers(db, "sqlmesh/core/dialect.py"))
 
