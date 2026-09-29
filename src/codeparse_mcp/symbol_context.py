@@ -7,29 +7,30 @@ _MAX_REFERENCE_CONTEXT = 150
 _REFERENCE_FETCH_LIMIT = 50
 
 _SYMBOL_ROW_SQL = """
-SELECT 
-    s.line_start, 
-    s.line_end, 
-    s.qualified_name, 
-    f.path AS file_path, 
+SELECT
+    s.line_start,
+    s.line_end,
+    s.qualified_name,
+    f.path AS file_path,
     s.kind,
     f.language AS file_language
 FROM symbols AS s
-INNER JOIN files AS f 
+INNER JOIN files AS f
     ON f.id = s.file_id
 WHERE s.qualified_name = ?
 """
 
 _REFERENCES_SQL = """
-SELECT 
-    f.path AS source_path, 
-    sr.source_line, 
-    sr.context, 
+SELECT
+    f.path AS source_path,
+    sr.source_line,
+    sr.context,
     sr.ref_kind
 FROM symbol_references AS sr
-INNER JOIN files AS f 
+INNER JOIN files AS f
     ON f.id = sr.source_file_id
 WHERE sr.ref_symbol_qualified_name = ?
+{test_filter}
 ORDER BY sr.ref_kind, f.path, sr.source_line
 LIMIT ?
 """
@@ -59,10 +60,15 @@ def _definition_gutter_width(line_start: int, line_count: int) -> int:
     return len(str(line_start + line_count - 1))
 
 
-def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
+def get_symbol_context(
+    db: CodeDB, qualified_name: str, *, include_tests: bool = False
+) -> str:
     """
     Return symbol metadata, source for the indexed span, and reference subsections
     grouped by ``ref_kind`` (only kinds with at least one row are shown).
+
+    By default skips references from ``is_test`` files. Pass
+    ``include_tests=True`` to include them.
 
     ``qualified_name`` must equal ``symbols.qualified_name`` (module-prefixed for
     Python). Bare names do not match.
@@ -99,7 +105,10 @@ def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
         body_lines.append(f"    (could not read source file: {e})")
 
     ref_rows = db.connection.execute(
-        _REFERENCES_SQL, (key, _REFERENCE_FETCH_LIMIT)
+        _REFERENCES_SQL.format(
+            test_filter="" if include_tests else "  AND f.is_test = 0"
+        ),
+        (key, _REFERENCE_FETCH_LIMIT),
     ).fetchall()
 
     lines: list[str] = [

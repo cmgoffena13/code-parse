@@ -91,11 +91,16 @@ def search_symbols(
 
 
 @mcp.tool()
-def get_symbol_context(qualified_name: str, ctx: Context) -> str:
-    """Return the symbol definition (source lines) and all references (calls, accesses,
-    type annotations)."""
+def get_symbol_context(
+    qualified_name: str, ctx: Context, include_tests: bool = False
+) -> str:
+    """Return the symbol definition (source lines) and references (calls, accesses,
+    type annotations). By default excludes references from ``is_test`` files;
+    set ``include_tests`` to include them."""
     name = qualified_name.strip()
-    return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
+    return _processor(ctx).run_query(
+        lambda db: run_symbol_context(db, name, include_tests=include_tests)
+    )
 
 
 @mcp.tool()

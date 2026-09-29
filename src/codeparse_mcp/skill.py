@@ -35,7 +35,9 @@ Symbols are keyed by **qualified_name** (module-prefixed for Python), e.g.
 - Prefer specific terms from the request.
 - Copy the exact **`qualified_name`** from hits into `get_symbol_context`.
 - Use this for definitions, callers, and reference traces.
-- Defaults to skipping symbols in ``is_test`` files; only set ``include_tests`` when you need them.
+- ``search_symbols`` defaults to skipping ``is_test`` files; ``get_symbol_context``
+  defaults to skipping references from ``is_test`` files. Set ``include_tests``
+  on either when you need them.
 
 ### get_file_overview
 - One file's imports + symbol tree (each node has `qualified_name`).
