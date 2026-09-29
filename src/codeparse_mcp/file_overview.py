@@ -1,64 +1,38 @@
 from collections import defaultdict
 
-from src.codeparse_mcp.clip import clipped_doc_lines
 from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
 _SYMBOLS_SQL = """
-SELECT 
-    id, 
-    parent_id, 
-    kind, 
-    qualified_name, 
-    name, 
-    line_start, 
-    line_end, 
-    signature, 
-    docstring
+SELECT
+    id,
+    parent_id,
+    kind,
+    qualified_name,
+    name,
+    line_start,
+    line_end,
+    line_count
 FROM symbols
 WHERE file_id = ?
 ORDER BY line_start, line_end, qualified_name
 """
 
 _IMPORTS_SQL = """
-SELECT 
-    line_number, 
+SELECT
+    line_number,
     signature
 FROM imports
 WHERE file_id = ?
 ORDER BY line_number
 """
 
-_MAX_SIGNATURE_LINES = 200
-_MAX_DOCSTRING_CHARS = 100
 
-
-def _line_span(line_start: int, line_end: int) -> str:
-    if line_start == line_end:
-        return f"L{line_start}"
-    return f"L{line_start}-{line_end}"
-
-
-def _format_sig_doc(detail_prefix: str, row) -> list[str]:
-    """``detail_prefix`` is the column before ``Sig:`` / ``Doc:`` (e.g. ``│   `` or ``    ``)."""
-    lines: list[str] = []
-    sig = (row["signature"] or "").strip()
-    if sig:
-        sig_parts = sig.splitlines()
-        total_sig_lines = len(sig_parts)
-        if total_sig_lines > _MAX_SIGNATURE_LINES:
-            sig_parts = sig_parts[:_MAX_SIGNATURE_LINES]
-        lines.append(f"{detail_prefix}Sig: {sig_parts[0]}")
-        for extra in sig_parts[1:]:
-            lines.append(f"{detail_prefix}    {extra}")
-        if total_sig_lines > _MAX_SIGNATURE_LINES:
-            omitted = total_sig_lines - _MAX_SIGNATURE_LINES
-            lines.append(f"{detail_prefix}    ...[truncated {omitted} lines]")
-    doc_raw = (row["docstring"] or "").strip()
-    if doc_raw:
-        first_line = doc_raw.splitlines()[0].strip()
-        lines.extend(clipped_doc_lines(detail_prefix, first_line, _MAX_DOCSTRING_CHARS))
-    return lines
+def _symbol_label(row) -> str:
+    qn = (row["qualified_name"] or row["name"] or "").strip()
+    n = int(row["line_count"] or 0)
+    kind = row["kind"] or ""
+    return f"{kind}  {qn} ({n}L)"
 
 
 def _symbol_branch_lines(
@@ -72,11 +46,7 @@ def _symbol_branch_lines(
     for index, row in enumerate(siblings):
         is_last = index == last_i
         connector = "└─ " if is_last else "├─ "
-        loc = _line_span(row["line_start"], row["line_end"])
-        label = (row["qualified_name"] or row["name"] or "").strip()
-        lines.append(f"{branch_prefix}{connector}{loc}  {row['kind']}  {label}")
-        detail_prefix = branch_prefix + ("    " if is_last else "│   ")
-        lines.extend(_format_sig_doc(detail_prefix, row))
+        lines.append(f"{branch_prefix}{connector}{_symbol_label(row)}")
         continuation = "   " if is_last else "│  "
         lines.extend(
             _symbol_branch_lines(
@@ -88,12 +58,11 @@ def _symbol_branch_lines(
 
 def get_file_overview(db: CodeDB, file_path: str) -> str:
     """
-    Return a readable overview of symbols (tree by ``parent_id``, with ``Sig`` /
-    ``Doc`` lines) and imports (source line + statement text) for one file.
+    Return imports and a nested symbol tree for one file.
 
-    Each symbol line uses ``qualified_name`` so callers can pass it to
-    ``get_symbol_context``. ``file_path`` is normalized to a POSIX path relative
-    to the index root (e.g. ``pkg/mod.py``).
+    Each symbol line uses ``qualified_name`` and a line-count ``(NL)`` so
+    callers can pass the name to ``get_symbol_context``. ``file_path`` is
+    normalized to a POSIX path relative to the index root (e.g. ``pkg/mod.py``).
     """
     try:
         path = normalize_repo_file_path(file_path, db.root)
@@ -115,9 +84,10 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     sym_rows = list(db.connection.execute(_SYMBOLS_SQL, (file_id,)))
 
     lines_out: list[str] = [
-        "Legend: L = Line, Sig = Signature, Doc = Docstring\n",
+        "Legend: L = Lines\n",
         f"File: {file_row['path']}",
-        f"Language: {file_row['language'] or '—'}\nLines: {file_row['line_count']}",
+        f"Language: {file_row['language'] or '—'}",
+        f"Lines: {file_row['line_count']}",
         "",
         f"## Imports ({len(imp_rows)})",
     ]
@@ -133,9 +103,9 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
                 if sig in seen_signatures:
                     continue
                 seen_signatures.add(sig)
-                lines_out.append(f"L{row['line_number']}: {sig}")
+                lines_out.append(sig)
             else:
-                lines_out.append(f"L{row['line_number']}: —")
+                lines_out.append("—")
 
     lines_out.extend(["", f"## Symbols ({len(sym_rows)})"])
 
@@ -164,10 +134,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
         for root_index, row in enumerate(roots):
             if root_index > 0:
                 lines_out.append("")
-            loc = _line_span(row["line_start"], row["line_end"])
-            root_label = (row["qualified_name"] or row["name"] or "").strip()
-            lines_out.append(f"{loc}  {row['kind']}  {root_label}")
-            lines_out.extend(_format_sig_doc("│   ", row))
+            lines_out.append(_symbol_label(row))
             lines_out.extend(_symbol_branch_lines(children_by_parent_id, row["id"], ""))
 
-    return "\n".join(lines_out)
+    return "\n".join(lines_out) + "\n"

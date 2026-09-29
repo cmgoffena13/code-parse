@@ -71,8 +71,8 @@ def find_paths(pattern: str, ctx: Context, limit: int = 50) -> str:
 
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
-    """Return imports and a symbol tree for one file. Each symbol includes its
-    ``qualified_name`` for ``get_symbol_context``."""
+    """Return imports and a nested symbol tree for one file (``qualified_name``
+    + line count). Use ``get_symbol_context`` for definitions."""
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
