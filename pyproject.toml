@@ -20,6 +20,9 @@ dev = [
     "pytest-xdist>=3.8.0",
     "ruff>=0.16.9",
     "ty>=0.0.84",
+    "cursor-sdk>=1.0.32",
+    "claude-agent-sdk>=0.1.59",
+    "python-dotenv>=1.2.3",
 ]
 
 [tool.pytest.ini_options]
@@ -54,6 +57,7 @@ lint.extend-select = [
 [tool.ruff.lint.per-file-ignores]
 "test_*.py" = ["S101", "S607"]
 "_assertions.py" = ["S101"]
+"eval/bench.py" = ["S603", "S607", "EXE001"]
 
 [tool.ty.src]
 exclude = ["src/tests/files_to_parse/"]

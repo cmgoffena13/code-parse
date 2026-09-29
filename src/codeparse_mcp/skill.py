@@ -1,10 +1,10 @@
 from pathlib import Path
 
-_SKILL_INSTRUCTIONS = """\
+SKILL_INSTRUCTIONS = """\
 ---
 name: Code-Parse
 description: Use the Code-Parse MCP Server effectively.
-allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context
+allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers
 ---
 
 ## Identifiers
@@ -29,6 +29,11 @@ Call `search_symbols` with keywords from the user's request. This FTS-searches
 - Prefer specific terms likely to appear in the codebase
 - Copy the **`qualified_name`** from each hit — you need it for Phase 3
 
+For "who imports module M" / "what depends on this file", call
+`find_importers` with a repo-relative path (`pkg/mod.py`) or dotted module
+(`pkg.mod`). Do not sample `get_file_overview` across many files to discover
+importers.
+
 ### Phase 3: Understand
 Call `get_symbol_context` with the exact **`qualified_name`** from Phase 2.
 This returns:
@@ -49,6 +54,7 @@ node shows `qualified_name`). Useful when:
   `get_file_overview` output.
 - For "where is X defined" or "who calls X", go
   `search_symbols` → `get_symbol_context`.
+- For "who imports module M", call `find_importers`.
 - Cite file paths and line numbers in every response.
 """
 
@@ -57,7 +63,7 @@ def generate_skill(root: Path | None = None) -> Path:
     base = (root or Path.cwd()).resolve()
     output_path = base / ".claude" / "skills" / "code-parse" / "SKILL.md"
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(_SKILL_INSTRUCTIONS, encoding="utf-8")
+    output_path.write_text(SKILL_INSTRUCTIONS, encoding="utf-8")
     return output_path
 
 

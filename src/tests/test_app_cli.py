@@ -258,6 +258,7 @@ def test_create_skill_writes_skill_md(
     text = skill_path.read_text(encoding="utf-8")
     assert "qualified_name" in text
     assert "get_symbol_context" in text
+    assert "find_importers" in text
 
 
 def test_create_skill_missing_cwd_exits_one(

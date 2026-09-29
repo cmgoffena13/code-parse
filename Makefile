@@ -1,8 +1,9 @@
-.PHONY: install ready format lint type-check test test-cov run compile
+.PHONY: install ready format lint type-check test test-cov run compile eval eval-smoke eval-clean cursor claude
 
 install:
 	uv sync --all-extras
 	uv run -- prek install
+	cp .env.example .env
 
 run:
 	uv run -- python main.py
@@ -23,6 +24,27 @@ test:
 
 test-cov:
 	uv run -- pytest --cov=src --cov-report=term-missing
+
+# Usage:
+#   make eval-smoke
+#   make eval-smoke claude
+#   make eval cursor
+RUNTIME := $(firstword $(filter cursor claude,$(MAKECMDGOALS)))
+ifeq ($(RUNTIME),)
+RUNTIME := cursor
+endif
+
+eval:
+	uv run -- python eval/bench.py --provider $(RUNTIME)
+
+eval-smoke:
+	uv run -- python eval/bench.py --smoke --provider $(RUNTIME)
+
+cursor claude:
+	@:
+
+eval-clean:
+	rm -rf eval/results
 
 compile:
 	uv run --no-dev -- nuitka src/app.py \

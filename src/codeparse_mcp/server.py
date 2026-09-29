@@ -8,6 +8,7 @@ from mcp.server.mcpserver import Context, MCPServer
 
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
+from src.codeparse_mcp.find_importers import find_importers as run_find_importers
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
@@ -20,6 +21,7 @@ incrementally on every tool call to reflect recent file changes.
 Prefer these tools for code analysis over generic file reading or grep search.
 Symbols are identified by ``qualified_name`` (module-prefixed for Python);
 copy it from ``search_symbols`` or ``get_file_overview`` into ``get_symbol_context``.
+For ``who imports module M``, use ``find_importers`` with a file path or dotted module.
 Start the server in the repository you want to index.
 """
 
@@ -92,6 +94,16 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     match. Includes file paths and line numbers for every reference."""
     name = qualified_name.strip()
     return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
+
+
+@mcp.tool()
+def find_importers(module_or_path: str, ctx: Context) -> str:
+    """Return every indexed file that imports a given module. Pass either a
+    repo-relative path (``sqlmesh/core/dialect.py``) or a dotted module
+    (``sqlmesh.core.dialect``). Use for \"who imports X\" / dependency fan-in;
+    prefer this over sampling ``get_file_overview`` across many files."""
+    target = module_or_path.strip()
+    return _processor(ctx).run_query(lambda db: run_find_importers(db, target))
 
 
 def main() -> None:

@@ -216,6 +216,10 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 
+# Eval harness artifacts
+eval/cache/
+eval/results/
+
 # Marimo
 marimo/_static/
 marimo/_lsp/
