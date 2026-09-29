@@ -63,7 +63,7 @@ def get_directory_tree(ctx: Context) -> str:
 def find_paths(pattern: str, ctx: Context, limit: int = 50) -> str:
     """Find indexed file/directory paths by glob-style pattern (e.g. ``*dialect*``,
     ``sqlmesh/core/*.py``). Prefer this over ``get_directory_tree`` when hunting
-    for a path. Does not search file contents."""
+    for a path. Does not search file contents. Do not call this repeatedly in one task."""
     return _processor(ctx).run_query(
         lambda db: run_find_paths(db, pattern, limit=limit)
     )

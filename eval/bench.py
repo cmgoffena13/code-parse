@@ -171,9 +171,8 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     if arm == "codeparse":
         parts.insert(
             0,
-            "Prefer the codeparse MCP tools (follow this skill). "
-            "You may also use read for specific line ranges when a tool "
-            "gives you line numbers. \n\n" + SKILL_INSTRUCTIONS,
+            "Use only the codeparse MCP tools (follow this skill). "
+            "Do not invent file contents.\n\n" + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
@@ -267,7 +266,7 @@ def run_cursor_agent(
         options = AgentOptions(
             model=model,
             api_key=api_key,
-            tools=["mcp", "read"],
+            tools=["mcp"],
             disallowed_tools=CURSOR_DISALLOWED,
             mcp_servers={
                 "codeparse": StdioMcpServerConfig(
@@ -338,9 +337,8 @@ async def _run_claude_query(
                     "args": _mcp_server_args(sqlmesh),
                 }
             },
-            allowed_tools=["mcp__codeparse__*", "Read"],
-            disallowed_tools=CLAUDE_DISALLOWED_WRITE
-            + [t for t in CLAUDE_DISALLOWED_READ if t != "Read"],
+            allowed_tools=["mcp__codeparse__*"],
+            disallowed_tools=CLAUDE_DISALLOWED_WRITE + CLAUDE_DISALLOWED_READ,
             permission_mode="bypassPermissions",
             setting_sources=[],
             strict_mcp_config=True,
