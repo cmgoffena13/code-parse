@@ -11,6 +11,7 @@ import os
 import statistics
 import subprocess
 import sys
+import time
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
@@ -436,6 +437,17 @@ def _fmt_tools(n: float | None) -> str:
     return str(round(n))
 
 
+def _fmt_duration(seconds: float) -> str:
+    total = max(0, round(seconds))
+    hours, rem = divmod(total, 3600)
+    minutes, secs = divmod(rem, 60)
+    if hours:
+        return f"{hours}h {minutes}m {secs}s"
+    if minutes:
+        return f"{minutes}m {secs}s"
+    return f"{secs}s"
+
+
 def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, Any]:
     arm_rows = [r for r in rows if r["task_id"] == task_id and r["arm"] == arm]
     passes = [r for r in arm_rows if r["passed"]]
@@ -475,7 +487,7 @@ def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, 
     }
 
 
-def summarize(rows: list[dict[str, Any]]) -> str:
+def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> str:
     task_ids = sorted({r["task_id"] for r in rows})
     cols = ("task", "baseline", "codeparse", "ratio")
     widths = {c: len(c) for c in cols}
@@ -545,6 +557,8 @@ def summarize(rows: list[dict[str, Any]]) -> str:
             "  * token medians marked with * include failed runs (no passes yet)",
         ]
     )
+    if elapsed_s is not None:
+        lines.append(f"  elapsed  : {_fmt_duration(elapsed_s)}")
     return "\n".join(lines) + "\n"
 
 
@@ -628,6 +642,7 @@ def main(argv: list[str] | None = None) -> int:
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     out_path = RESULTS_DIR / f"{stamp}.jsonl"
     rows: list[dict[str, Any]] = []
+    started = time.perf_counter()
 
     print(f"provider={provider} model={model}")
 
@@ -689,7 +704,7 @@ def main(argv: list[str] | None = None) -> int:
             print()
 
     print(f"\nWrote {out_path}")
-    summary = summarize(rows)
+    summary = summarize(rows, elapsed_s=time.perf_counter() - started)
     summary_path = out_path.with_suffix(".summary.txt")
     summary_path.write_text(summary, encoding="utf-8")
     print(f"Wrote {summary_path}")
