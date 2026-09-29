@@ -87,12 +87,13 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
     shown_files = list(by_file.items())[:_MAX_IMPORTER_FILES]
 
     lines_out: list[str] = [
+        "Legend: • = Import\n",
         f"Importers of {target_path} — {total_files} files",
         "",
     ]
     for importer_path, by_line in shown_files:
         for line_n, names in by_line.items():
-            lines_out.append(f"{importer_path}:{line_n} — {', '.join(names)}")
+            lines_out.append(f"  • {importer_path}:{line_n} - {', '.join(names)}")
 
     if total_files > _MAX_IMPORTER_FILES:
         omitted = total_files - _MAX_IMPORTER_FILES

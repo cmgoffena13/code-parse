@@ -101,7 +101,7 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context, include_tests: bool = False) -> str:
     """Return indexed files that import a given module file as
-    ``path:line — symbols``. By default skips files marked ``is_test``; set
+    ``• path:line - symbols``. By default skips files marked ``is_test``; set
     ``include_tests`` to include them. Use for who-imports / dependency fan-in."""
     path = file_path.strip()
     return _processor(ctx).run_query(
