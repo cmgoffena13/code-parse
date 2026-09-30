@@ -2,7 +2,7 @@
 
 CodeParse is a codebase indexer that gives agents fast, accurate, and compact context on your Python codebases while reducing token usage.
 
-![Lines of Code](https://aschey.tech/tokei/github/cmgoffena13/codeparse?category=code)![License](https://img.shields.io/badge/license-MIT-informational?style=flat)
+![Lines of Code](https://aschey.tech/tokei/github/cmgoffena13/codeparse?category=code) ![License](https://img.shields.io/badge/license-MIT-informational?style=flat)
 
 ## Install as an MCP server
 
