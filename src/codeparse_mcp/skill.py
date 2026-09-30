@@ -30,7 +30,7 @@ The information that is provided to you will determine the tool you should use.
 
 ### ``glob``
  - Use when the clue is a path or a file name.
- - DO NOT glob for specific directory files, use ``get_directory_tree`` instead with the path.
+ - DO NOT glob for specific directory files; use ``get_directory_tree`` with the path.
 
 ### ``grep``
  - Use when the clue is specific text in file contents.
