@@ -19,8 +19,7 @@ _INSTRUCTIONS = """\
 codeparse tools read an up-to-date SQLite code index. 
 The index is automatically refreshed on every tool call to reflect recent file changes. 
 Start the server in the repository you want to index.
-
-Current Supported Languages: [Python]
+Utilize the ``codeparse`` skill for the best results if available.
 """
 
 
@@ -104,7 +103,6 @@ def get_symbol_context(
     """
     Return the symbol definition (source lines).
     Excludes references (calls, accesses, type annotations) by default. Set ``include_references`` to include them.
-    Prefer ``get_symbol_context`` over ``read`` to get symbol definitions.
     """
     name = qualified_name.strip()
     return _processor(ctx).run_query(
@@ -115,7 +113,7 @@ def get_symbol_context(
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context, include_tests: bool = False) -> str:
     """
-    Return files that import a given module file as ``• path:line - symbols``.
+    Return files that import a given module file, with line and imported symbols.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     path = file_path.strip()

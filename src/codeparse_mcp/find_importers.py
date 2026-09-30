@@ -87,7 +87,7 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
     shown_files = list(by_file.items())[:_MAX_IMPORTER_FILES]
 
     lines_out: list[str] = [
-        "Legend: • = Import\n",
+        "Legend: • path:line - imported symbols\n",
         f"Importers of {target_path} — {total_files} files",
         "",
     ]

@@ -52,13 +52,16 @@ def main() -> int:
             print("Restart the client (or reload MCP) to pick up the change.")
             return 0
         return 1
-    if args.create_skill:
+    if args.command == "create-skill":
         from src.codeparse_mcp.skill import generate_skill
 
-        root = _require_dir(args.cwd)
-        if root is None:
-            return 1
-        path = generate_skill(root)
+        if args.target == "claude":
+            root = _require_dir(args.cwd)
+            if root is None:
+                return 1
+            path = generate_skill("claude", root=root)
+        else:
+            path = generate_skill("cursor")
         print(f"Wrote skill → {path}")
         return 0
     if args.command == "index":

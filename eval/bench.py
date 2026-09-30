@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Token-usage benchmark: codeparse MCP (+ grep/glob/ls, no read) vs read/grep on a pinned SQLMesh checkout.
+"""Token-usage benchmark: codeparse MCP (+ read/grep/glob/ls) vs read/grep on a pinned SQLMesh checkout.
 
 Supports --provider cursor (Cursor SDK) or claude (Claude Agent SDK).
 """
@@ -57,9 +57,9 @@ CLAUDE_DISALLOWED_WRITE = [
     "SlashCommand",
 ]
 CURSOR_BASELINE_TOOLS = ["read", "grep", "glob", "ls"]
-CURSOR_CODEPARSE_TOOLS = ["grep", "glob", "ls", "mcp"]
+CURSOR_CODEPARSE_TOOLS = ["read", "grep", "glob", "ls", "mcp"]
 CLAUDE_BASELINE_TOOLS = ["Read", "Grep", "Glob", "LS"]
-CLAUDE_CODEPARSE_TOOLS = ["Grep", "Glob", "LS"]
+CLAUDE_CODEPARSE_TOOLS = ["Read", "Grep", "Glob", "LS"]
 
 
 def _load_tasks() -> dict[str, Any]:
@@ -174,9 +174,9 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     if arm == "codeparse":
         parts.insert(
             0,
-            "You have grep/glob/ls plus the codeparse MCP server. "
-            "Do not use read — use ``get_file_overview`` / ``get_symbol_context`` "
-            "for file and symbol contents (follow this skill).\n\n"
+            "You have read/grep/glob/ls plus the codeparse MCP server. "
+            "Prefer ``get_file_overview`` / ``get_symbol_context`` for file and "
+            "symbol contents when those tools fit (follow this skill).\n\n"
             + SKILL_INSTRUCTIONS,
         )
     else:
@@ -385,7 +385,7 @@ def run_cursor_agent(
             model=model,
             api_key=api_key,
             tools=CURSOR_CODEPARSE_TOOLS,
-            disallowed_tools=[*CURSOR_DISALLOWED, "read"],
+            disallowed_tools=CURSOR_DISALLOWED,
             mcp_servers={
                 "codeparse": StdioMcpServerConfig(
                     command="uv",
@@ -461,7 +461,7 @@ async def _run_claude_query(
                 }
             },
             allowed_tools=[*CLAUDE_CODEPARSE_TOOLS, "mcp__codeparse__*"],
-            disallowed_tools=[*CLAUDE_DISALLOWED_WRITE, "Read"],
+            disallowed_tools=CLAUDE_DISALLOWED_WRITE,
             permission_mode="bypassPermissions",
             setting_sources=[],
             strict_mcp_config=True,
@@ -557,6 +557,12 @@ def median_or_none(values: list[int]) -> float | None:
     return float(statistics.median(values))
 
 
+def mean_or_none(values: list[int]) -> float | None:
+    if not values:
+        return None
+    return float(statistics.mean(values))
+
+
 def _fmt_tokens(n: float | None) -> str:
     if n is None:
         return "—"
@@ -584,6 +590,29 @@ def _fmt_duration(seconds: float) -> str:
     if minutes:
         return f"{minutes}m {secs}s"
     return f"{secs}s"
+
+
+def _overall_block(
+    label: str,
+    pass_tokens: dict[str, list[int]],
+    pass_tools: dict[str, list[int]],
+    *,
+    agg,
+) -> list[str]:
+    base_tokens = agg(pass_tokens["baseline"])
+    treat_tokens = agg(pass_tokens["codeparse"])
+    ratio_tokens = (
+        (treat_tokens / base_tokens) if base_tokens and treat_tokens else None
+    )
+    base_tools = agg(pass_tools["baseline"])
+    treat_tools = agg(pass_tools["codeparse"])
+    ratio_tools = (treat_tools / base_tools) if base_tools and treat_tools else None
+    return [
+        f"Overall {label} (of per-task passing medians)",
+        f"  baseline : {_fmt_tokens(base_tokens)} tokens  ({_fmt_tools(base_tools)} tools)",
+        f"  codeparse: {_fmt_tokens(treat_tokens)} tokens  ({_fmt_tools(treat_tools)} tools)",
+        f"  ratio    : {_fmt_ratio(ratio_tokens)} tokens  {_fmt_ratio(ratio_tools)} tools  (codeparse / baseline)",
+    ]
 
 
 def _arm_stats(rows: list[dict[str, Any]], task_id: str, arm: str) -> dict[str, Any]:
@@ -680,22 +709,12 @@ def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> 
     for row in table:
         lines.append("  ".join(row[c].ljust(widths[c]) for c in cols))
 
-    base_all = median_or_none(overall_pass["baseline"])
-    treat_all = median_or_none(overall_pass["codeparse"])
-    ratio_all = (treat_all / base_all) if base_all and treat_all else None
-    base_tools = median_or_none(overall_tools["baseline"])
-    treat_tools = median_or_none(overall_tools["codeparse"])
-    tools_ratio = (treat_tools / base_tools) if base_tools and treat_tools else None
+    lines.append("")
     lines.extend(
-        [
-            "",
-            "Overall (median of per-task passing medians)",
-            f"  baseline : {_fmt_tokens(base_all)} tokens  ({_fmt_tools(base_tools)} tools)",
-            f"  codeparse: {_fmt_tokens(treat_all)} tokens  ({_fmt_tools(treat_tools)} tools)",
-            f"  ratio    : {_fmt_ratio(ratio_all)} tokens  {_fmt_ratio(tools_ratio)} tools  (codeparse / baseline)",
-            "  * token medians marked with * include failed runs (no passes yet)",
-        ]
+        _overall_block("median", overall_pass, overall_tools, agg=median_or_none)
     )
+    lines.extend(_overall_block("mean", overall_pass, overall_tools, agg=mean_or_none))
+    lines.append("  * token medians marked with * include failed runs (no passes yet)")
     if elapsed_s is not None:
         lines.append(f"  elapsed  : {_fmt_duration(elapsed_s)}")
     return "\n".join(lines) + "\n"
@@ -785,75 +804,68 @@ def main(argv: list[str] | None = None) -> int:
 
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-    out_path = RESULTS_DIR / f"{stamp}.jsonl"
+    out_path = RESULTS_DIR / f"{stamp}.json"
     rows: list[dict[str, Any]] = []
     started = time.perf_counter()
 
     print(f"provider={provider} model={model}")
 
-    with out_path.open("w", encoding="utf-8") as fh:
-        for task in tasks:
-            for arm in arms:
-                for repeat in range(repeats):
-                    prompt = build_prompt(task, arm=arm)
-                    print(
-                        f"RUN {task['id']} provider={provider} "
-                        f"arm={arm} repeat={repeat}"
+    for task in tasks:
+        for arm in arms:
+            for repeat in range(repeats):
+                prompt = build_prompt(task, arm=arm)
+                print(f"RUN {task['id']} provider={provider} arm={arm} repeat={repeat}")
+                try:
+                    text, run_id, usage, status, tools_used, tool_timeline = run_agent(
+                        provider=provider,
+                        arm=arm,
+                        prompt=prompt,
+                        model=model,
+                        api_key=api_key,
+                        sqlmesh=sqlmesh,
                     )
-                    try:
-                        text, run_id, usage, status, tools_used, tool_timeline = (
-                            run_agent(
-                                provider=provider,
-                                arm=arm,
-                                prompt=prompt,
-                                model=model,
-                                api_key=api_key,
-                                sqlmesh=sqlmesh,
-                            )
-                        )
-                    except Exception as exc:  # noqa: BLE001 — keep going
-                        text, run_id, usage, status, tools_used, tool_timeline = (
-                            "",
-                            None,
-                            None,
-                            f"error:{exc}",
-                            None,
-                            None,
-                        )
-                    passed, missing = grade(
-                        text,
-                        task.get("must_contain", []),
-                        task.get("must_contain_any"),
+                except Exception as exc:  # noqa: BLE001 — keep going
+                    text, run_id, usage, status, tools_used, tool_timeline = (
+                        "",
+                        None,
+                        None,
+                        f"error:{exc}",
+                        None,
+                        None,
                     )
-                    row = {
-                        "provider": provider,
-                        "task_id": task["id"],
-                        "arm": arm,
-                        "repeat": repeat,
-                        "passed": passed,
-                        "missing": missing,
-                        "status": status,
-                        "run_id": run_id,
-                        "usage": usage,
-                        "tools_used": tools_used,
-                        "tool_timeline": tool_timeline,
-                        "answer": text,
-                        "model": model,
-                        "sqlmesh_sha": catalog["sha"],
-                    }
-                    fh.write(json.dumps(row) + "\n")
-                    fh.flush()
-                    rows.append(row)
-                    print(
-                        f"  status={status} passed={passed} "
-                        f"total={None if not usage else usage.get('total_tokens')} "
-                        f"tools_used={tools_used} "
-                        f"missing={missing}"
-                    )
-                    if args.verbose:
-                        _print_verbose_timeline(tool_timeline)
-            print()
+                passed, missing = grade(
+                    text,
+                    task.get("must_contain", []),
+                    task.get("must_contain_any"),
+                )
+                row = {
+                    "provider": provider,
+                    "task_id": task["id"],
+                    "arm": arm,
+                    "repeat": repeat,
+                    "passed": passed,
+                    "missing": missing,
+                    "status": status,
+                    "run_id": run_id,
+                    "usage": usage,
+                    "tools_used": tools_used,
+                    "tool_timeline": tool_timeline,
+                    "answer": text,
+                    "model": model,
+                    "sqlmesh_sha": catalog["sha"],
+                }
+                rows.append(row)
+                print(
+                    f"  status={status} passed={passed} "
+                    f"total={None if not usage else usage.get('total_tokens')} "
+                    f"tools_used={tools_used} "
+                    f"missing={missing}"
+                )
+                if args.verbose:
+                    _print_verbose_timeline(tool_timeline)
+        print()
 
+    out_path.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
     print(f"\nWrote {out_path}")
     summary = summarize(rows, elapsed_s=time.perf_counter() - started)
     summary_path = out_path.with_suffix(".summary.txt")

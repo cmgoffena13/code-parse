@@ -242,13 +242,15 @@ def test_merge_mcp_server_rejects_non_object_servers(tmp_path: Path) -> None:
         merge_mcp_server(path, {"command": "codeparse"})
 
 
-def test_create_skill_writes_skill_md(
+def test_create_skill_claude_writes_skill_md(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     monkeypatch.setattr(
-        sys, "argv", ["codeparse", "--create-skill", "--cwd", str(tmp_path)]
+        sys,
+        "argv",
+        ["codeparse", "create-skill", "claude", "--cwd", str(tmp_path)],
     )
     assert main() == 0
     out = capsys.readouterr().out
@@ -261,14 +263,30 @@ def test_create_skill_writes_skill_md(
     assert "find_importers" in text
 
 
-def test_create_skill_missing_cwd_exits_one(
+def test_create_skill_cursor_writes_under_home(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    monkeypatch.setattr(sys, "argv", ["codeparse", "create-skill", "cursor"])
+    assert main() == 0
+    out = capsys.readouterr().out
+    skill_path = tmp_path / ".cursor" / "skills" / "codeparse" / "SKILL.md"
+    assert skill_path.is_file()
+    assert str(skill_path) in out
+
+
+def test_create_skill_claude_missing_cwd_exits_one(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
     tmp_path: Path,
 ) -> None:
     missing = tmp_path / "gone"
     monkeypatch.setattr(
-        sys, "argv", ["codeparse", "--create-skill", "--cwd", str(missing)]
+        sys,
+        "argv",
+        ["codeparse", "create-skill", "claude", "--cwd", str(missing)],
     )
     assert main() == 1
     assert "Not a directory" in capsys.readouterr().err

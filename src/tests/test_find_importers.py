@@ -48,7 +48,7 @@ def test_find_importers_by_path(indexed_import_pair: Path) -> None:
         assert "other.py" in by_path
         assert "helper" in by_path
         assert "Importers of pkg/target.py" in by_path
-        assert "Legend: • = Import" in by_path
+        assert "Legend: • path:line - imported symbols" in by_path
         assert "1S" not in by_path
         assert "  • pkg/importer.py:" in by_path
         assert " - " in by_path

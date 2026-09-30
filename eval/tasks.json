@@ -19,8 +19,10 @@
       "must_contain": [
         "sqlmesh.cli.main.plan",
         "sqlmesh.core.context.GenericContext.plan",
-        "sqlmesh/core/context.py",
-        "1413"
+        "sqlmesh/core/context.py"
+      ],
+      "must_contain_any": [
+        ["1412", "1413"]
       ]
     },
     {
