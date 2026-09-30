@@ -29,6 +29,5 @@ Overall mean (of per-task passing medians)
   baseline : 570,117 tokens  (23 tools)
   codeparse: 213,169 tokens  (12 tools)
   ratio    : 0.37x tokens  0.51x tools  (codeparse / baseline)
-  * token medians marked with * include failed runs (no passes yet)
   elapsed  : 33m 15s
 ```

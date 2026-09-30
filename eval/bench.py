@@ -714,7 +714,6 @@ def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> 
         _overall_block("median", overall_pass, overall_tools, agg=median_or_none)
     )
     lines.extend(_overall_block("mean", overall_pass, overall_tools, agg=mean_or_none))
-    lines.append("  * token medians marked with * include failed runs (no passes yet)")
     if elapsed_s is not None:
         lines.append(f"  elapsed  : {_fmt_duration(elapsed_s)}")
     return "\n".join(lines) + "\n"
