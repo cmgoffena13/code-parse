@@ -85,7 +85,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
 
     Imports use a padded ``L{n}`` gutter (same idea as ``get_symbol_context``).
     Symbols use ``L{start}[-{end}]  kind  qualified_name``. ``file_path`` is
-    normalized to a POSIX path relative to the index root (e.g. ``pkg/mod.py``).
+    normalized to a POSIX path relative to the workspace root (e.g. ``pkg/mod.py``).
     """
     try:
         path = normalize_repo_file_path(file_path, db.root)
@@ -98,8 +98,8 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     ).fetchone()
     if file_row is None:
         return (
-            f"No indexed file matches {path!r}. "
-            f"Use the local path as stored in the index (relative to {db.root})."
+            f"No file matches {path!r}. "
+            f"Use a repo-relative path (relative to {db.root})."
         )
 
     file_id = file_row["id"]

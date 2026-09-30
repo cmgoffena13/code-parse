@@ -7,10 +7,10 @@ SKILL_INSTRUCTIONS = """\
 ---
 name: codeparse
 description: Use the codeparse MCP Server effectively.
-allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers find_subclasses get_project_overview
+allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context get_symbol_references find_importers find_subclasses get_project_overview
 ---
 
-IMPORTANT: ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of ``read`` to get symbol information.
+IMPORTANT: ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of ``read`` to get file / symbol information.
 
 The information that is provided to you will determine the tool you should use.
 
@@ -27,27 +27,20 @@ The information that is provided to you will determine the tool you should use.
 3. Use ``get_symbol_context`` to get the code definition of the symbol.
 
 ## How to investigate the codebase using keywords
+
 ### ``glob``
  - Use when the clue is a path or a file name.
  - DO NOT glob for specific directory files, use ``get_directory_tree`` instead with the path.
+
 ### ``grep``
  - Use when the clue is specific text in file contents.
- - DO NOT grep for symbol names, use ``search_symbols`` instead.
- - DO NOT grep for import statements, use ``find_importers`` or ``get_symbol_context`` with ``include_references=True`` instead.
+ - DO NOT grep for symbol names; use ``search_symbols``.
+ - DO NOT grep for import statements; use ``find_importers``.
+ - DO NOT grep for reference sites of a known symbol; use ``get_symbol_references``.
+
 ### ``search_symbols``
  - Use when the clue is part of a symbol name, signature, or docstring.
  - Set the limit to 5 if you know the local symbol name, but need the qualified name.
-
-## When to use ``find_importers``
- - You need to find all files that import a given file
- - You need to find all files that import a symbol from the given file.
-
-## When to use ``find_subclasses``
- - You need the classes that directly inherit a given class.
-
-## When to use ``get_directory_tree``
- - You need to get a summary of the files of the codebase.
- - You need to get a summary of the files in a given directory.
 """
 
 

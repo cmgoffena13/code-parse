@@ -34,7 +34,7 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
     """
     List files that import the module at ``file_path``.
 
-    ``file_path`` is normalized to a POSIX path relative to the index root
+    ``file_path`` is normalized to a POSIX path relative to the workspace root
     (e.g. ``sqlmesh/core/dialect.py``). Matching uses ``imports.imported_file_id``
     when resolved, and ``imports.import_path`` as a fallback for unresolved rows
     that still name the module's ``normalized_path``.
@@ -52,8 +52,8 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
         target = db.connection.execute(_RESOLVE_FILE_SQL, (f"{path}.py",)).fetchone()
     if target is None:
         return (
-            f"No indexed file matches {path!r}. "
-            f"Use the local path as stored in the index (relative to {db.root}), "
+            f"No file matches {path!r}. "
+            f"Use a repo-relative path (relative to {db.root}), "
             f"e.g. via get_directory_tree or get_file_overview."
         )
 
@@ -70,7 +70,7 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
         )
     )
     if not rows:
-        return f"No importers of {target_path} in the index."
+        return f"No importers of {target_path} were found."
 
     # Group by importer file, then by line, collecting imported names.
     by_file: OrderedDict[str, OrderedDict[int, list[str]]] = OrderedDict()

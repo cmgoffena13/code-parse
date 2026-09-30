@@ -15,18 +15,19 @@ from src.codeparse_mcp.project_overview import (
 )
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
+from src.codeparse_mcp.symbol_references import (
+    get_symbol_references as run_symbol_references,
+)
 from src.db import CodeDB
 from src.processor import CodeProcessor
 from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
-codeparse tools read an up-to-date code index.
-The index refreshes before every tool call to reflect recent file changes. 
-Start the server in the repository you want to index.
+codeparse tools read an up-to-date view of the codebase.
+Start the server in the repository you want to analyze.
 Utilize the ``codeparse`` skill for the best results if available.
 
 Current Supported File Languages: [Python]
-NEVER manually access the index. ONLY use the tools provided.
 """
 
 
@@ -110,19 +111,22 @@ def search_symbols(
 
 
 @mcp.tool()
-def get_symbol_context(
-    qualified_name: str,
-    ctx: Context,
-    include_references: bool = False,
-) -> str:
+def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     """
-    Return the symbol code definition and references (calls, accesses, type annotations).
-    Excludes references by default. Set ``include_references`` to include them.
+    Return the symbol code definition and aggregated count of reference sites (calls, accesses, type annotations).
+    Use ``get_symbol_references`` for detailed call, access, and type-annotation sites.
     """
     name = qualified_name.strip()
-    return _processor(ctx).run_query(
-        lambda db: run_symbol_context(db, name, include_references=include_references)
-    )
+    return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
+
+
+@mcp.tool()
+def get_symbol_references(qualified_name: str, ctx: Context) -> str:
+    """
+    Return reference sites for a symbol (calls, accesses, type annotations).
+    """
+    name = qualified_name.strip()
+    return _processor(ctx).run_query(lambda db: run_symbol_references(db, name))
 
 
 @mcp.tool()

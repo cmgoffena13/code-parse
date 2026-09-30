@@ -260,6 +260,7 @@ def test_create_skill_claude_writes_skill_md(
     text = skill_path.read_text(encoding="utf-8")
     assert "get_file_overview" in text
     assert "get_symbol_context" in text
+    assert "get_symbol_references" in text
     assert "find_importers" in text
 
 

@@ -43,7 +43,7 @@ def search_symbols(
     include_tests: bool = False,
 ) -> str:
     """
-    Search indexed symbols via ``symbols_fts`` (qualified_name, signature,
+    Search symbols via ``symbols_fts`` (qualified_name, signature,
     docstring). Repo-wide only — use ``get_file_overview`` to map one file.
 
     Query is space-separated phrases/terms, OR'd with prefix matching. Returns

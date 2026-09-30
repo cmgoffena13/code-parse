@@ -17,6 +17,7 @@ def test_generate_skill_claude_defaults_to_cwd(
     assert path.is_file()
     text = path.read_text(encoding="utf-8")
     assert "get_symbol_context" in text
+    assert "get_symbol_references" in text
     assert "get_file_overview" in text
 
 

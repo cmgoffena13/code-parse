@@ -52,9 +52,9 @@ def _lines_under_parent(children_by_parent_id, parent_key, branch_prefix):
 
 def get_directory_tree(db: CodeDB, path: str | None = None) -> str:
     """
-    Return the indexed directory/file tree with line and symbol counts.
+    Return the directory/file tree with line and symbol counts.
 
-    Optional ``path`` scopes to one indexed directory (exact path).
+    Optional ``path`` scopes to one directory tree (exact path).
     """
     children_by_parent_id = defaultdict(list)
     for row in db.connection.execute(_TREE_SQL):
@@ -79,8 +79,8 @@ def get_directory_tree(db: CodeDB, path: str | None = None) -> str:
             ).fetchone()
             if dir_row is None:
                 return (
-                    f"No indexed directory matches {scoped!r}. "
-                    f"Use a directory path from ``glob`` / the index (not a file)."
+                    f"No directory matches {scoped!r}. "
+                    f"Use a directory path from ``glob`` (not a file)."
                 )
             root_key = dir_row["id"]
             root_label = f"{dir_row['path']}/"

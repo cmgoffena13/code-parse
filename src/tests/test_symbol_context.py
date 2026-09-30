@@ -1,8 +1,9 @@
-"""Tests for get_symbol_context MCP query."""
+"""Tests for get_symbol_context and get_symbol_references MCP queries."""
 
 from pathlib import Path
 
 from src.codeparse_mcp.symbol_context import get_symbol_context
+from src.codeparse_mcp.symbol_references import get_symbol_references
 from src.db import CodeDB
 from src.processor import CodeProcessor
 
@@ -32,12 +33,16 @@ def _index(tmp_path: Path) -> Path:
     return tmp_path
 
 
-def test_symbol_context_definition_omits_references_by_default(tmp_path: Path) -> None:
+def test_symbol_context_definition_only(tmp_path: Path) -> None:
     root = _index(tmp_path)
     db = CodeDB(root)
     try:
         out = get_symbol_context(db, "pkg.target.helper")
         assert "## Code Definition" in out
+        assert "## References" in out
+        assert "Calls: 2" in out
+        assert "Access: 0" in out
+        assert "Type Annotations: 0" in out
         assert "pkg/user.py" not in out
         assert "tests/test_target.py" not in out
         assert "## Calls" not in out
@@ -45,15 +50,28 @@ def test_symbol_context_definition_omits_references_by_default(tmp_path: Path) -
         db.close()
 
 
-def test_symbol_context_include_references_lists_all_refs(tmp_path: Path) -> None:
+def test_symbol_references_lists_calls_with_counts(tmp_path: Path) -> None:
     root = _index(tmp_path)
     db = CodeDB(root)
     try:
-        out = get_symbol_context(db, "pkg.target.helper", include_references=True)
+        out = get_symbol_references(db, "pkg.target.helper")
+        assert "References of pkg.target.helper" in out
+        assert "total" in out
         assert "pkg/user.py" in out
         assert "tests/test_target.py" in out
         assert "## Calls" in out
         assert "  • L" in out
         assert "pkg/user.py:" not in out
+        assert "(" in out  # kind and/or file counts
+    finally:
+        db.close()
+
+
+def test_symbol_references_none(tmp_path: Path) -> None:
+    root = _index(tmp_path)
+    db = CodeDB(root)
+    try:
+        out = get_symbol_references(db, "pkg.target.missing")
+        assert out == "No references to pkg.target.missing were found."
     finally:
         db.close()

@@ -9,6 +9,7 @@ from src.codeparse_mcp.find_subclasses import find_subclasses
 from src.codeparse_mcp.project_overview import get_project_overview
 from src.codeparse_mcp.search_symbols import search_symbols
 from src.codeparse_mcp.symbol_context import get_symbol_context
+from src.codeparse_mcp.symbol_references import get_symbol_references
 from src.db import CodeDB
 from src.processor import CodeProcessor
 
@@ -47,11 +48,11 @@ def main() -> None:
     _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
     _print_section(
         "SYMBOL CONTEXT",
-        get_symbol_context(
-            db,
-            "sqlmesh.RuntimeEnv.is_terminal",
-            include_references=True,
-        ),
+        get_symbol_context(db, "sqlmesh.RuntimeEnv.is_terminal"),
+    )
+    _print_section(
+        "SYMBOL REFERENCES",
+        get_symbol_references(db, "sqlmesh.RuntimeEnv.is_terminal"),
     )
     _print_section("FIND IMPORTERS", find_importers(db, "sqlmesh/core/dialect.py"))
     _print_section(

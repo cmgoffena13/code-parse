@@ -1,9 +1,5 @@
-from collections import OrderedDict, defaultdict
-
 from src.codeparse_mcp.format_utils import lines_range
 from src.db import CodeDB
-
-_REFERENCE_FETCH_LIMIT = 50
 
 _SYMBOL_ROW_SQL = """
 SELECT
@@ -19,23 +15,17 @@ INNER JOIN files AS f
 WHERE s.qualified_name = ?
 """
 
-_REFERENCES_SQL = """
-SELECT
-    f.path AS source_path,
-    sr.source_line,
-    sr.ref_kind
-FROM symbol_references AS sr
-INNER JOIN files AS f
-    ON f.id = sr.source_file_id
-WHERE sr.ref_symbol_qualified_name = ?
-ORDER BY sr.ref_kind, f.path, sr.source_line
-LIMIT ?
+_REF_KIND_COUNTS_SQL = """
+SELECT ref_kind, COUNT(*) AS n
+FROM symbol_references
+WHERE ref_symbol_qualified_name = ?
+GROUP BY ref_kind
 """
 
-_REF_KIND_SECTIONS: tuple[tuple[str, str], ...] = (
-    ("call", "## Calls"),
-    ("access", "## Access"),
-    ("type_annotation", "## Type Annotations"),
+_REF_KIND_LABELS: tuple[tuple[str, str], ...] = (
+    ("call", "Calls"),
+    ("access", "Access"),
+    ("type_annotation", "Type Annotations"),
 )
 
 
@@ -45,40 +35,21 @@ def _definition_gutter_width(line_start: int, line_count: int) -> int:
     return len(str(line_start + line_count - 1))
 
 
-def _reference_section_lines(heading: str, items: list) -> list[str]:
-    """Group reference rows by file under ``heading`` with ``L{n}`` bullets."""
-    by_file: OrderedDict[str, list[int]] = OrderedDict()
-    for r in items:
-        path = r["source_path"]
-        by_file.setdefault(path, []).append(int(r["source_line"]))
-
-    lines_out = [
-        "",
-        f"{heading} ({len(items)})",
-        "",
-    ]
-    for path_index, (path, line_nums) in enumerate(by_file.items()):
-        if path_index > 0:
-            lines_out.append("")
-        lines_out.append(path)
-        for line_n in line_nums:
-            lines_out.append(f"  • L{line_n}")
-    return lines_out
+def _reference_totals(db: CodeDB, qualified_name: str) -> list[str]:
+    counts = {
+        row["ref_kind"]: int(row["n"])
+        for row in db.connection.execute(_REF_KIND_COUNTS_SQL, (qualified_name,))
+    }
+    return [f"{label}: {counts.get(kind, 0)}" for kind, label in _REF_KIND_LABELS]
 
 
-def get_symbol_context(
-    db: CodeDB,
-    qualified_name: str,
-    *,
-    include_references: bool = False,
-) -> str:
+def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
     """
-    Return symbol metadata and source for the indexed span. With
-    ``include_references=True``, also append reference subsections grouped by
-    ``ref_kind`` then file (only kinds with at least one row are shown).
+    Return symbol metadata, reference totals, and source for the symbol span.
 
     ``qualified_name`` must equal ``symbols.qualified_name`` (module-prefixed for
-    Python). Bare names do not match.
+    Python). Bare names do not match. Use ``get_symbol_references`` for the
+    individual call / access / type-annotation sites.
     """
     key = qualified_name.strip()
     if not key:
@@ -86,7 +57,7 @@ def get_symbol_context(
 
     row = db.connection.execute(_SYMBOL_ROW_SQL, (key,)).fetchone()
     if row is None:
-        return f"No symbol with qualified_name {key!r} in the index."
+        return f"No symbol with qualified_name {key!r} was found."
 
     path = row["file_path"]
     line_start = int(row["line_start"])
@@ -98,7 +69,7 @@ def get_symbol_context(
     try:
         raw_lines = abs_path.read_text(encoding="utf-8", errors="replace").splitlines()
         if line_start < 1:
-            body_lines.append("    (invalid line_start in index)")
+            body_lines.append("    (invalid line_start)")
         else:
             chunk = raw_lines[line_start - 1 : line_end]
             if not chunk:
@@ -123,30 +94,7 @@ def get_symbol_context(
         "",
     ]
     lines.extend(body_lines)
-
-    if include_references:
-        ref_rows = db.connection.execute(
-            _REFERENCES_SQL,
-            (key, _REFERENCE_FETCH_LIMIT),
-        ).fetchall()
-        by_kind: defaultdict[str, list] = defaultdict(list)
-        for r in ref_rows:
-            by_kind[r["ref_kind"]].append(r)
-
-        covered = {k for k, _ in _REF_KIND_SECTIONS}
-        for kind, heading in _REF_KIND_SECTIONS:
-            items = by_kind.get(kind, [])
-            if not items:
-                continue
-            lines.extend(_reference_section_lines(heading, items))
-
-        for kind in sorted(by_kind.keys()):
-            if kind in covered:
-                continue
-            items = by_kind[kind]
-            if not items:
-                continue
-            title = kind.replace("_", " ").title()
-            lines.extend(_reference_section_lines(f"## {title}", items))
+    lines.extend(["", "## References", ""])
+    lines.extend(_reference_totals(db, key))
 
     return "\n".join(lines) + "\n"
