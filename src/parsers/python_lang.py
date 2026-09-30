@@ -106,6 +106,41 @@ class PythonParser(ParserBase):
             return f"{self._module_qn}.{target_name}"
         return target_name
 
+    def _base_source_name(self, node: Node) -> str | None:
+        """Leftmost name of a base, peeling ``Generic[T]`` down to ``Generic``."""
+        current = node
+        while current.type == "subscript":
+            value = current.child_by_field_name("value")
+            if value is None:
+                named = current.named_children
+                value = named[0] if named else None
+            if value is None:
+                return None
+            current = value
+        if current.type not in ("identifier", "dotted_name", "attribute"):
+            return None
+        if current.text is None:
+            return None
+        return current.text.decode("utf-8")
+
+    def _class_bases(self, node: Node) -> tuple[list[str], list[str]]:
+        raw: list[str] = []
+        resolved: list[str] = []
+        seen: set[str] = set()
+        for child in node.children:
+            if child.type != "argument_list":
+                continue
+            for base in child.named_children:
+                text = self._base_source_name(base)
+                if not text:
+                    continue
+                raw.append(text)
+                qn = self._resolve_ref_qn(text)
+                if qn and qn not in seen:
+                    seen.add(qn)
+                    resolved.append(qn)
+        return raw, resolved
+
     @staticmethod
     def _normalize_signature_bytes(
         file_bytes: bytes, start_byte: int, end_byte: int, *, tail_rstrip: bool
@@ -147,7 +182,7 @@ class PythonParser(ParserBase):
         signature: str,
         docstring: str | None,
         modifiers: list,
-        base_classes: list[str],
+        base_qualified_names: list[str],
         is_test: bool,
     ) -> dict:
         return {
@@ -164,7 +199,7 @@ class PythonParser(ParserBase):
             "docstring": docstring,
             "modifiers": str(modifiers) if modifiers else None,
             "language": "python",
-            "base_classes": str(base_classes) if base_classes else None,
+            "base_qualified_names": base_qualified_names,
             "is_test": is_test,
         }
 
@@ -194,7 +229,7 @@ class PythonParser(ParserBase):
             "docstring": None,
             "modifiers": None,
             "language": "python",
-            "base_classes": None,
+            "base_qualified_names": [],
             "is_test": is_test,
         }
 
@@ -620,18 +655,12 @@ class PythonParser(ParserBase):
                     if dec_text:
                         modifiers.append(dec_text)
 
-        # Extract Base Classes (for classes only)
-        base_classes: list[str] = []
+        # Extract Base Classes (for classes only). Raw text feeds is_test;
+        # stored names are resolved qualified names.
+        raw_bases: list[str] = []
+        base_qualified_names: list[str] = []
         if kind == "class":
-            # tree-sitter-python represents bases as an `argument_list` child.
-            for child in node.children:
-                if child.type != "argument_list":
-                    continue
-                for base in child.named_children:
-                    if base.type in ("identifier", "dotted_name", "attribute"):
-                        if base.text is None:
-                            continue
-                        base_classes.append(base.text.decode("utf-8"))
+            raw_bases, base_qualified_names = self._class_bases(node)
 
         # Extract Signature: entire decorated_definition prefix (all @ lines) through the
         # inner definition header (same end_byte = start of def/class body).
@@ -676,7 +705,7 @@ class PythonParser(ParserBase):
         if (
             (kind == "function" and name.startswith("test_"))
             or (kind == "class" and name.startswith("Test"))
-            or (kind == "class" and any("TestCase" in bc for bc in base_classes))
+            or (kind == "class" and any("TestCase" in bc for bc in raw_bases))
             or (kind == "method" and name.startswith("test_") and parent_is_test)
         ):
             is_test = True
@@ -684,17 +713,21 @@ class PythonParser(ParserBase):
         symbol_identity = scope_path
         qualified_name = symbol_identity
         key = (symbol_identity, kind)
+        resolved_bases = tuple(base_qualified_names)
         if key in self.symbols_snapshot:
             self.symbols_snapshot[key]["seen"] = True
             # Only emit a row when something relevant changed; unchanged symbols still
             # need stack context, which is handled in _walk.
+            prev = self.symbols_snapshot[key]
+            prev_bases = tuple(prev.get("base_qualified_names", ()))
             if (line_start, line_end) != (
-                self.symbols_snapshot[key]["line_start"],
-                self.symbols_snapshot[key]["line_end"],
-            ):
-                symbol_id = self.symbols_snapshot[key]["id"]
-                self.symbols_snapshot[key]["line_start"] = line_start
-                self.symbols_snapshot[key]["line_end"] = line_end
+                prev["line_start"],
+                prev["line_end"],
+            ) or tuple(sorted(resolved_bases)) != tuple(sorted(prev_bases)):
+                symbol_id = prev["id"]
+                prev["line_start"] = line_start
+                prev["line_end"] = line_end
+                prev["base_qualified_names"] = resolved_bases
                 return self._container_symbol_dict(
                     symbol_id,
                     file_id,
@@ -706,7 +739,7 @@ class PythonParser(ParserBase):
                     signature,
                     docstring,
                     modifiers,
-                    base_classes,
+                    base_qualified_names,
                     is_test,
                 )
             return None
@@ -716,6 +749,7 @@ class PythonParser(ParserBase):
             "seen": True,
             "line_start": line_start,
             "line_end": line_end,
+            "base_qualified_names": resolved_bases,
         }
         return self._container_symbol_dict(
             symbol_id,
@@ -728,7 +762,7 @@ class PythonParser(ParserBase):
             signature,
             docstring,
             modifiers,
-            base_classes,
+            base_qualified_names,
             is_test,
         )
 

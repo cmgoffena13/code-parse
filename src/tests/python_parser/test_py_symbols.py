@@ -123,7 +123,8 @@ def test_python_fixture_another_file_has_fakeclass_call_reference(
         for r in references
     )
 
-    # Base classes extracted
+    # Base classes extracted as resolved qualified names
     assert "AnotherClass" in by_qn
-    assert by_qn["AnotherClass"]["base_classes"] is not None
-    assert "FakeClass" in by_qn["AnotherClass"]["base_classes"]
+    assert by_qn["AnotherClass"]["base_qualified_names"] == [
+        "src.tests.files_to_parse.python.file.FakeClass"
+    ]

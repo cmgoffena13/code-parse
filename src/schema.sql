@@ -4,6 +4,7 @@ PRAGMA synchronous=NORMAL;
 -- DROP TABLE IF EXISTS watermarks; -- TODO: Remove this after testing.
 -- DROP TABLE IF EXISTS directories;
 -- DROP TABLE IF EXISTS files;
+-- DROP TABLE IF EXISTS symbol_bases;
 -- DROP TABLE IF EXISTS symbols;
 -- DROP TABLE IF EXISTS symbol_references_staging;
 -- DROP TABLE IF EXISTS symbol_references;
@@ -52,12 +53,19 @@ CREATE TABLE IF NOT EXISTS symbols (
     signature       TEXT NOT NULL,                           
     docstring       TEXT,                            
     modifiers       TEXT,                           
-    base_classes    TEXT,                          
     language        TEXT NOT NULL,
     is_test         BOOLEAN NOT NULL DEFAULT FALSE               
 );
 CREATE INDEX IF NOT EXISTS symbols_file_id_index ON symbols (file_id);
 CREATE UNIQUE INDEX IF NOT EXISTS symbols_qualified_name_index ON symbols (qualified_name);
+
+CREATE TABLE IF NOT EXISTS symbol_bases (
+    symbol_id               INTEGER NOT NULL REFERENCES symbols(id),
+    base_qualified_name     TEXT NOT NULL,
+    PRIMARY KEY (symbol_id, base_qualified_name)
+);
+CREATE INDEX IF NOT EXISTS symbol_bases_base_qualified_name_index
+    ON symbol_bases (base_qualified_name);
 
 CREATE TABLE IF NOT EXISTS symbol_references_staging (
     id                          INTEGER NOT NULL,

@@ -95,25 +95,45 @@ class CodeDB:
     def get_symbols_snapshot(
         self, file_id: int
     ) -> dict[tuple[str, str], dict[str, Any]]:
+        # NOTE: combine symbol_bases and symbols into a single query
         query = """
             SELECT
-            id,
-            qualified_name AS name,
-            kind,
-            line_start,
-            line_end
-            FROM symbols
-            WHERE file_id = ?
+                s.id,
+                s.qualified_name AS name,
+                s.kind,
+                s.line_start,
+                s.line_end,
+                sb.base_qualified_name
+            FROM symbols AS s
+            LEFT JOIN symbol_bases AS sb
+                ON sb.symbol_id = s.id
+            WHERE s.file_id = ?
+            ORDER BY s.id, sb.base_qualified_name
             """
-        cursor = self.connection.execute(query, (file_id,))
+        rows = self.connection.execute(query, (file_id,)).fetchall()
+        by_key: dict[tuple[str, str], dict[str, Any]] = {}
+        for row in rows:
+            key = (row["name"], row["kind"])
+            entry: dict[str, Any] | None = by_key.get(key)
+            if entry is None:
+                entry = {
+                    "id": row["id"],
+                    "line_start": row["line_start"],
+                    "line_end": row["line_end"],
+                    "base_qualified_names": [],
+                    "seen": False,
+                }
+                by_key[key] = entry
+            base_qn = row["base_qualified_name"]
+            if base_qn:
+                names: list[str] = entry["base_qualified_names"]
+                names.append(base_qn)
         return {
-            (row["name"], row["kind"]): {
-                "id": row["id"],
-                "line_start": row["line_start"],
-                "line_end": row["line_end"],
-                "seen": False,
+            key: {
+                **entry,
+                "base_qualified_names": tuple(entry["base_qualified_names"]),
             }
-            for row in cursor
+            for key, entry in by_key.items()
         }
 
     def delete_symbols(
@@ -126,14 +146,16 @@ class CodeDB:
             return
         with self.connection:
             ids_placeholder = ",".join(["?"] * len(symbol_ids))
-            symbols_stmt = "DELETE FROM symbols WHERE id IN"
-            fts_stmt = "DELETE FROM symbols_fts WHERE rowid IN"
             self.connection.execute(
-                f"{symbols_stmt} ({ids_placeholder})",
+                f"DELETE FROM symbol_bases WHERE symbol_id IN ({ids_placeholder})",  # noqa: S608
                 symbol_ids,
             )
             self.connection.execute(
-                f"{fts_stmt} ({ids_placeholder})",
+                f"DELETE FROM symbols WHERE id IN ({ids_placeholder})",  # noqa: S608
+                symbol_ids,
+            )
+            self.connection.execute(
+                f"DELETE FROM symbols_fts WHERE rowid IN ({ids_placeholder})",  # noqa: S608
                 symbol_ids,
             )
 
@@ -227,14 +249,39 @@ class CodeDB:
                 files,
             )
 
+            base_rows: list[dict[str, Any]] = []
+            for symbol in symbols:
+                for base_qn in symbol.pop("base_qualified_names", ()):
+                    base_rows.append(
+                        {
+                            "symbol_id": symbol["id"],
+                            "base_qualified_name": base_qn,
+                        }
+                    )
+
             self.connection.executemany(
                 """
                 INSERT OR REPLACE INTO symbols
-                (id, file_id, parent_id, name, qualified_name, kind, line_start, line_end, line_count, signature, docstring, modifiers, base_classes, language, is_test)
-                VALUES (:id, :file_id, :parent_id, :name, :qualified_name, :kind, :line_start, :line_end, :line_count, :signature, :docstring, :modifiers, :base_classes, :language, :is_test)
+                (id, file_id, parent_id, name, qualified_name, kind, line_start, line_end, line_count, signature, docstring, modifiers, language, is_test)
+                VALUES (:id, :file_id, :parent_id, :name, :qualified_name, :kind, :line_start, :line_end, :line_count, :signature, :docstring, :modifiers, :language, :is_test)
                 """,
                 symbols,
             )
+            if symbols:
+                symbol_ids = [symbol["id"] for symbol in symbols]
+                placeholder = ",".join(["?"] * len(symbol_ids))
+                self.connection.execute(
+                    f"DELETE FROM symbol_bases WHERE symbol_id IN ({placeholder})",  # noqa: S608
+                    symbol_ids,
+                )
+            if base_rows:
+                self.connection.executemany(
+                    """
+                    INSERT INTO symbol_bases (base_qualified_name, symbol_id)
+                    VALUES (:base_qualified_name, :symbol_id)
+                    """,
+                    base_rows,
+                )
 
             fts_symbols = [
                 (s["id"], s["qualified_name"], s["docstring"], s["signature"])
