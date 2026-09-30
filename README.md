@@ -16,14 +16,12 @@ Ten Questions found in `eval/tasks.json` are evaluated against the [SQLMesh](htt
  - **Baseline**: Baseline Agent, has builtin tools
  - **CodeParse**: Agent has access to builtin tools and CodeParse MCP Server
  - **Total Tokens**: All tokens used by the agent to complete the task.
- - **Tool Calls**: Count of tool calls, regardless of MCP or builtin.
+ 
 ```
 Cursor Benchmark Evaluation - Grok 4.7
 ----------------- Mean -----------------
 Baseline Total Tokene: 337,737
-Baseline Tool Calls: 20
 CodeParse Total Tokens: 198,469 (-41% reduction)
-CodeParse Tool Calls: 11 (-45% reduction)
 ----------------------------------------
 ```
 
