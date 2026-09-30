@@ -9,6 +9,7 @@ from mcp.server.mcpserver import Context, MCPServer
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
+from src.codeparse_mcp.find_subclasses import find_subclasses as run_find_subclasses
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
@@ -109,6 +110,20 @@ def get_symbol_context(
     name = qualified_name.strip()
     return _processor(ctx).run_query(
         lambda db: run_symbol_context(db, name, include_references=include_references)
+    )
+
+
+@mcp.tool()
+def find_subclasses(
+    qualified_name: str, ctx: Context, include_tests: bool = False
+) -> str:
+    """
+    Return classes that directly inherit from a given class, with file and line.
+    Excludes test files by default; set ``include_tests`` to include them.
+    """
+    name = qualified_name.strip()
+    return _processor(ctx).run_query(
+        lambda db: run_find_subclasses(db, name, include_tests=include_tests)
     )
 
 
