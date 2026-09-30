@@ -113,6 +113,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
         f"Lines: {file_row['line_count']}",
         "",
         f"## Imports ({len(imp_rows)})",
+        "",
     ]
     if not imp_rows:
         lines_out.append("_(none)_")
@@ -138,7 +139,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
             else:
                 lines_out.append(sig)
 
-    lines_out.extend(["", f"## Symbols ({len(sym_rows)})"])
+    lines_out.extend(["", f"## Symbols ({len(sym_rows)})", ""])
 
     if not sym_rows:
         lines_out.append("_(none)_")
