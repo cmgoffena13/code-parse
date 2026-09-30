@@ -53,3 +53,25 @@ def test_file_overview_includes_import_and_symbol_line_numbers(tmp_path: Path) -
         assert "(2L)" not in out
     finally:
         db.close()
+
+
+def test_file_overview_labels_property_methods(tmp_path: Path) -> None:
+    (tmp_path / ".gitignore").write_text("# test fixture\n", encoding="utf-8")
+    (tmp_path / "mod.py").write_text(
+        "class Box:\n"
+        "    @property\n"
+        "    def size(self) -> int:\n"
+        "        return 1\n"
+        "\n"
+        "    def grow(self) -> None:\n"
+        "        pass\n",
+        encoding="utf-8",
+    )
+    db = CodeDB(tmp_path)
+    try:
+        CodeProcessor(db, tmp_path).process()
+        out = get_file_overview(db, "mod.py")
+        assert "property  mod.Box.size" in out
+        assert "method  mod.Box.grow" in out
+    finally:
+        db.close()

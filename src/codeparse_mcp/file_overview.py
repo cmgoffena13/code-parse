@@ -1,3 +1,4 @@
+from ast import literal_eval
 from collections import defaultdict
 
 from src.codeparse_mcp.format_utils import line_span
@@ -12,7 +13,8 @@ SELECT
     qualified_name,
     name,
     line_start,
-    line_end
+    line_end,
+    modifiers
 FROM symbols
 WHERE file_id = ?
 ORDER BY line_start, line_end, qualified_name
@@ -35,9 +37,23 @@ def _gutter_width(*line_numbers: int) -> int:
     return len(str(max(positives)))
 
 
+def _display_kind(row) -> str:
+    kind = (row["kind"] or "").strip()
+    raw = row["modifiers"]
+    if not raw or kind not in ("method", "function"):
+        return kind
+    try:
+        mods = literal_eval(raw)
+    except (SyntaxError, ValueError):
+        return kind
+    if isinstance(mods, list) and "property" in mods:
+        return "property"
+    return kind
+
+
 def _symbol_label(row) -> str:
     loc = line_span(int(row["line_start"]), int(row["line_end"]))
-    kind = row["kind"] or ""
+    kind = _display_kind(row)
     label = (row["qualified_name"] or row["name"] or "").strip()
     return f"{loc}  {kind}  {label}"
 
