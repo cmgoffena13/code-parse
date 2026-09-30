@@ -18,7 +18,7 @@ codeparse create-skill cursor   # ~/.cursor/skills/codeparse/ (all projects)
 
 The skill teaches when to use each MCP tool (`search_symbols`, `get_file_overview`, `get_symbol_context`, `find_importers`, `get_directory_tree`) and to prefer those over `read` for file and symbol contents.
 
-## Benchmark
+## Benchmark (in-progress)
 
 Ten Questions found in `eval/tasks.json` are evaluated against a baseline agent and an agent with the MCP server.
 
