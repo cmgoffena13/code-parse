@@ -4,6 +4,10 @@ import sys
 import tomllib
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 
 def get_version() -> str:
     """Get the version of the application."""
@@ -33,10 +37,9 @@ def ensure_dir(path: Path) -> Path:
 
 def get_code_parse_config_dir(*parts: str) -> Path:
     """
-    Base directory for codeparse local config/data.
+    Base directory for codeparse local config/data (indexes, etc.).
 
-    Uses ``$CODE_PARSE_CONFIG_DIR`` when set (e.g. tests); otherwise
-    ``~/.config/codeparse``.
+    Uses ``$CODE_PARSE_CONFIG_DIR`` when set; otherwise ``~/.config/codeparse``.
 
     If ``parts`` are provided, returns ``<base>/<parts...>`` and creates it.
     """

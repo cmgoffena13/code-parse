@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from src.utils import get_version
+from src.utils import get_code_parse_config_dir, get_version
 
 
 def test_get_version_reads_pyproject() -> None:
@@ -12,6 +12,25 @@ def test_get_version_reads_pyproject() -> None:
     with pyproject.open("rb") as f:
         expected = tomllib.load(f)["project"]["version"]
     assert get_version() == expected
+
+
+def test_config_dir_defaults_to_xdg(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.delenv("CODE_PARSE_CONFIG_DIR", raising=False)
+    monkeypatch.setattr(Path, "home", classmethod(lambda _cls: tmp_path))
+    base = get_code_parse_config_dir()
+    assert base == tmp_path / ".config" / "codeparse"
+    assert base.is_dir()
+
+
+def test_config_dir_respects_env_override(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    override = tmp_path / "custom-config"
+    monkeypatch.setenv("CODE_PARSE_CONFIG_DIR", str(override))
+    assert get_code_parse_config_dir() == override
+    assert override.is_dir()
 
 
 def test_get_version_frozen_with_meipass(

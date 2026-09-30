@@ -19,6 +19,8 @@ _INSTRUCTIONS = """\
 codeparse tools read an up-to-date SQLite code index. 
 The index is automatically refreshed on every tool call to reflect recent file changes. 
 Start the server in the repository you want to index.
+
+Current Supported Languages: [Python]
 """
 
 
