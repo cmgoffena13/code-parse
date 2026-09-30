@@ -91,7 +91,7 @@ def test_install_mcp_merges_into_cursor_and_claude(
     fake_cli = tmp_path / "codeparse"
     fake_cli.write_text("#!/bin/sh\n", encoding="utf-8")
 
-    monkeypatch.setattr(sys, "argv", ["codeparse", "--install-mcp"])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "mcp", "install"])
     monkeypatch.setattr(
         "src.cli.install_mcp.cursor_mcp_config_path",
         lambda: cursor,
@@ -130,7 +130,7 @@ def test_install_mcp_merges_into_cursor_and_claude(
 def test_install_mcp_cli_exits_one_when_nothing_written(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(sys, "argv", ["codeparse", "--install-mcp"])
+    monkeypatch.setattr(sys, "argv", ["codeparse", "mcp", "install"])
     monkeypatch.setattr("src.cli.install_mcp.install_mcp", list)
     assert main() == 1
 

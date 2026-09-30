@@ -44,14 +44,6 @@ def main() -> int:
     if args.version:
         print(f"codeparse Version: {get_version()}")
         return 0
-    if args.install_mcp:
-        from src.cli.install_mcp import install_mcp
-
-        written = install_mcp()
-        if written:
-            print("Restart the client (or reload MCP) to pick up the change.")
-            return 0
-        return 1
     if args.command == "create-skill":
         from src.codeparse_mcp.skill import generate_skill
 
@@ -70,6 +62,14 @@ def main() -> int:
             return 1
         return _run_index(root, full=args.full_reload)
     if args.command == "mcp":
+        if getattr(args, "mcp_command", None) == "install":
+            from src.cli.install_mcp import install_mcp
+
+            written = install_mcp()
+            if written:
+                print("Restart the client (or reload MCP) to pick up the change.")
+                return 0
+            return 1
         root = _require_dir(args.cwd)
         if root is None:
             return 1

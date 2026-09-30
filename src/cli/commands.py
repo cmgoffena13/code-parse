@@ -15,11 +15,6 @@ def make_parser() -> argparse.ArgumentParser:
         help="Show CLI information",
     )
     parser.add_argument(
-        "--install-mcp",
-        action="store_true",
-        help="Register codeparse in Cursor and Claude Desktop MCP configs",
-    )
-    parser.add_argument(
         "--cwd",
         type=Path,
         default=Path.cwd(),
@@ -49,13 +44,18 @@ def make_parser() -> argparse.ArgumentParser:
 
     mcp_parser = subparsers.add_parser(
         "mcp",
-        help="Start the MCP server over stdio",
+        help="Start the MCP server, or manage client registration",
     )
     mcp_parser.add_argument(
         "--cwd",
         type=Path,
         default=Path.cwd(),
         help="Workspace root to index (default: current directory)",
+    )
+    mcp_sub = mcp_parser.add_subparsers(dest="mcp_command", required=False)
+    mcp_sub.add_parser(
+        "install",
+        help="Register codeparse in Cursor and Claude Desktop MCP configs",
     )
 
     index_parser = subparsers.add_parser(
