@@ -26,7 +26,6 @@ Start the server in the repository you want to index.
 Utilize the ``codeparse`` skill for the best results if available.
 
 Current Supported File Languages: [Python]
-
 NEVER manually access the index. ONLY use the tools provided.
 """
 
