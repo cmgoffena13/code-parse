@@ -20,7 +20,7 @@ from src.processor import CodeProcessor
 from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
-codeparse tools read an up-to-date SQLite code index. 
+codeparse tools read an up-to-date code index.
 The index is automatically refreshed on every tool call to reflect recent file changes. 
 Start the server in the repository you want to index.
 Utilize the ``codeparse`` skill for the best results if available.
@@ -61,9 +61,7 @@ def _processor(ctx: Context) -> CodeProcessor:
 @mcp.tool()
 def get_project_overview(ctx: Context) -> str:
     """
-    Return the ten directories with the most symbols, plus entry points.
-    Entry points come from pyproject.toml scripts, app.py / main.py, and
-    ``if __name__ == "__main__"``. Test files are skipped.
+    Return the top ten directories and all entry points.
     """
     return _processor(ctx).run_query(run_project_overview)
 
