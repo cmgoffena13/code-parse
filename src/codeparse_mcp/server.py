@@ -21,11 +21,13 @@ from src.utils import get_code_parse_config_dir
 
 _INSTRUCTIONS = """\
 codeparse tools read an up-to-date code index.
-The index is automatically refreshed on every tool call to reflect recent file changes. 
+The index refreshes before every tool call to reflect recent file changes. 
 Start the server in the repository you want to index.
 Utilize the ``codeparse`` skill for the best results if available.
 
 Current Supported File Languages: [Python]
+
+NEVER manually access the index. ONLY use the tools provided.
 """
 
 
