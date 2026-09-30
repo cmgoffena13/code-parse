@@ -7,16 +7,10 @@ Python codebase indexer exposed as an MCP server via the `codeparse` CLI.
 1. Get the `codeparse` binary (release asset or `make compile` → `dist/codeparse`).
 2. Make sure the binary is on your PATH
 3. Run `codeparse --install-mcp`
-4. Reload the client (or refresh MCP) so it picks up the new server.
-
-## Agent skill
-
-```bash
-codeparse create-skill claude   # .claude/skills/codeparse/ under the project (--cwd)
-codeparse create-skill cursor   # ~/.cursor/skills/codeparse/ (all projects)
-```
-
-The skill teaches when to use each MCP tool (`search_symbols`, `get_file_overview`, `get_symbol_context`, `find_importers`, `get_directory_tree`) and to prefer those over `read` for file and symbol contents.
+4. Run `codeparse create-skill claude|cursor`
+  - Claude: `.claude/skills/codeparse/` under the project (--cwd)
+  - Cursor: `~/.cursor/skills/codeparse/` (all projects)
+5. Reload the client (or refresh MCP) so it picks up the new server.
 
 ## Benchmark (in-progress)
 
