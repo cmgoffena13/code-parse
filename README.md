@@ -11,7 +11,7 @@ Python codebase indexer exposed as an MCP server via the `codeparse` CLI.
 
 ## Benchmark (in-progress)
 
-Ten Questions found in `eval/tasks.json` are evaluated against a baseline agent and an agent with the MCP server.
+Ten Questions found in `eval/tasks.json` are evaluated against the [SQLMesh](https://github.com/TobikoData/sqlmesh) repo using a baseline agent and an agent with the MCP server.
 
 Cursor Default Model: `grok 4.7`  
 Claude Defualt Model: `opus 5.5 medium`
