@@ -609,9 +609,9 @@ def _overall_block(
     ratio_tools = (treat_tools / base_tools) if base_tools and treat_tools else None
     return [
         f"Overall {label} (of per-task passing medians)",
-        f"  baseline : {_fmt_tokens(base_tokens)} tokens  ({_fmt_tools(base_tools)} tools)",
-        f"  codeparse: {_fmt_tokens(treat_tokens)} tokens  ({_fmt_tools(treat_tools)} tools)",
-        f"  ratio    : {_fmt_ratio(ratio_tokens)} tokens  {_fmt_ratio(ratio_tools)} tools  (codeparse / baseline)",
+        f"  baseline : {_fmt_tokens(base_tokens)} tokens  ({_fmt_tools(base_tools)} tool calls)",
+        f"  codeparse: {_fmt_tokens(treat_tokens)} tokens  ({_fmt_tools(treat_tools)} tool calls)",
+        f"  ratio    : {_fmt_ratio(ratio_tokens)} tokens  {_fmt_ratio(ratio_tools)} tool calls  (codeparse / baseline)",
     ]
 
 
@@ -682,9 +682,9 @@ def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> 
             if stats["median_pass"] is not None:
                 tokens = _fmt_tokens(stats["median_pass"])
                 cache = _fmt_tokens(stats["median_cache_pass"])
-                return f"{score}  {tokens} tokens  (cache {cache}; {tools} tools)"
+                return f"{score}  {tokens} tokens  (cache {cache}; {tools} tool calls)"
             tokens = _fmt_tokens(stats["median_all"])
-            return f"{score}  {tokens} tokens*  ({tools} tools)"
+            return f"{score}  {tokens} tokens*  ({tools} tool calls)"
 
         ratio = None
         if base["median_pass"] and treat["median_pass"]:
