@@ -12,7 +12,6 @@ CodeParse is a codebase indexer that gives agents fast, accurate, and compact co
 2. `codeparse --install-mcp`
 3. `codeparse create-skill cursor` (all projects) or `codeparse create-skill claude` (current project)
 4. Reload the client (or refresh MCP).
----
 
 ## Benchmark Evaluation (in-progress)
 
