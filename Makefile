@@ -49,7 +49,6 @@ cursor claude v verbose:
 
 eval-clean:
 	rm -rf eval/results
-	rm -rf eval/cache
 
 compile:
 	uv run --no-dev -- nuitka src/app.py \
