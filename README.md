@@ -4,8 +4,6 @@ CodeParse is a codebase indexer that gives agents fast, accurate, and compact co
 
 ![Lines of Code](https://aschey.tech/tokei/github/cmgoffena13/codeparse?category=code)![License](https://img.shields.io/badge/license-MIT-informational?style=flat)
 
----
-
 ## Install as an MCP server
 
 1. Put the `codeparse` binary on your PATH (release asset or `make compile` → `dist/codeparse`).
