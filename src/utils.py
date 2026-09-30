@@ -4,9 +4,12 @@ import sys
 import tomllib
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    pass
+else:
+    load_dotenv()
 
 
 def get_version() -> str:
