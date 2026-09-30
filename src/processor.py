@@ -269,8 +269,12 @@ class CodeProcessor:
 
         duration = time_now - start_time
         duration_ms = duration * 1000
+        indexed = (
+            f"Indexed {self.files_indexed} files incrementally"
+            if not full
+            else f"Indexed {self.files_indexed} files"
+        )
         print(
-            f"Indexed {self.files_indexed} files in {duration_ms:.2f} ms "
-            f"(files_skipped: {self.files_skipped})",
+            f"{indexed} in {duration_ms:.2f} ms (files_skipped: {self.files_skipped})",
             file=sys.stderr,  # NOTE: Print to stderr to avoid interfering with MCP output.
         )
