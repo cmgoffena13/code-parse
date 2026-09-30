@@ -29,6 +29,7 @@ The information that is provided to you will determine the tool you should use.
 ## How to investigate the codebase using keywords
  - Use ``glob`` when the clue is a path or a file name.
  - Use ``grep`` when the clue is text in file contents.
+ - Use ``search_symbols`` when the clue is a symbol name or phrase referencing a symbol.
 
 ## When to use ``find_importers``
  - You need to find all the files that import a given file or symbol.

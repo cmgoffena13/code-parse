@@ -9,6 +9,7 @@ from mcp.server.mcpserver import Context, MCPServer
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
+from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
 from src.processor import CodeProcessor
@@ -69,27 +70,27 @@ def get_file_overview(file_path: str, ctx: Context) -> str:
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
 
-# @mcp.tool()
-# def search_symbols(
-#     query: str,
-#     ctx: Context,
-#     limit: int = 10,
-#     include_tests: bool = False,
-# ) -> str:
-#     """
-#     Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
-#     Excludes test files by default. Set ``include_tests`` to include them.
-#     Use multiple keywords to refine your search.
-#     Example queries: ``loader OR load``, ``dialect AND format``
-#     """
-#     return _processor(ctx).run_query(
-#         lambda db: run_symbol_search(
-#             db,
-#             query,
-#             limit,
-#             include_tests=include_tests,
-#         )
-#     )
+@mcp.tool()
+def search_symbols(
+    query: str,
+    ctx: Context,
+    limit: int = 10,
+    include_tests: bool = False,
+) -> str:
+    """
+    Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
+    Excludes test files by default. Set ``include_tests`` to include them.
+    Use multiple keywords to refine your search. Separate keywords with spaces.
+    Example queries: ``loader``, ``dialect format``
+    """
+    return _processor(ctx).run_query(
+        lambda db: run_symbol_search(
+            db,
+            query,
+            limit,
+            include_tests=include_tests,
+        )
+    )
 
 
 @mcp.tool()

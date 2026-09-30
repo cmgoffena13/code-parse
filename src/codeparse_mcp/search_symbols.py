@@ -23,7 +23,11 @@ LIMIT ?
 
 
 def build_fts_query(user_input: str) -> str:
-    """Turn free text into an OR-based prefix query for FTS5 (e.g. ``auth login`` → ``auth* OR login*``)."""
+    """Turn free text into an OR of prefix terms (e.g. ``auth login`` → ``auth* OR login*``).
+
+    Tokens are always OR'd. Do not treat ``AND``/``OR``/``NOT`` in the input as
+    FTS operators — they become ordinary terms.
+    """
     terms = user_input.strip().split()
     if not terms:
         return ""
@@ -41,10 +45,10 @@ def search_symbols(
     Search indexed symbols via ``symbols_fts`` (qualified_name, signature,
     docstring). Repo-wide only — use ``get_file_overview`` to map one file.
 
-    Returns ranked hits grouped by file. Each file header includes that file's
-    line count, and each hit includes ``qualified_name`` and line count for
-    follow-up with ``get_symbol_context``. By default skips symbols in
-    ``is_test`` files; pass ``include_tests=True`` to search those too.
+    Query is space-separated phrases/terms, OR'd with prefix matching. Returns
+    ranked hits grouped by file (path + line count; each hit has
+    ``qualified_name`` + line count) for ``get_symbol_context``. By default
+    skips ``is_test`` files; pass ``include_tests=True`` to include them.
     """
     stripped = query.strip()
     if not stripped:

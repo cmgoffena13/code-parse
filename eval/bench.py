@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Token-usage benchmark: codeparse MCP (+ built-ins) vs read/grep on a pinned SQLMesh checkout.
+"""Token-usage benchmark: codeparse MCP (+ grep/glob/ls, no read) vs read/grep on a pinned SQLMesh checkout.
 
 Supports --provider cursor (Cursor SDK) or claude (Claude Agent SDK).
 """
@@ -57,7 +57,9 @@ CLAUDE_DISALLOWED_WRITE = [
     "SlashCommand",
 ]
 CURSOR_BASELINE_TOOLS = ["read", "grep", "glob", "ls"]
+CURSOR_CODEPARSE_TOOLS = ["grep", "glob", "ls", "mcp"]
 CLAUDE_BASELINE_TOOLS = ["Read", "Grep", "Glob", "LS"]
+CLAUDE_CODEPARSE_TOOLS = ["Grep", "Glob", "LS"]
 
 
 def _load_tasks() -> dict[str, Any]:
@@ -172,9 +174,10 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
     if arm == "codeparse":
         parts.insert(
             0,
-            "You have the usual read/grep/glob/ls tools plus the codeparse MCP "
-            "server. Prefer codeparse tools when they fit (follow this skill); "
-            "otherwise use the built-ins. \n\n" + SKILL_INSTRUCTIONS,
+            "You have grep/glob/ls plus the codeparse MCP server. "
+            "Do not use read — use ``get_file_overview`` / ``get_symbol_context`` "
+            "for file and symbol contents (follow this skill).\n\n"
+            + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
@@ -381,8 +384,8 @@ def run_cursor_agent(
         options = AgentOptions(
             model=model,
             api_key=api_key,
-            tools=[*CURSOR_BASELINE_TOOLS, "mcp"],
-            disallowed_tools=CURSOR_DISALLOWED,
+            tools=CURSOR_CODEPARSE_TOOLS,
+            disallowed_tools=[*CURSOR_DISALLOWED, "read"],
             mcp_servers={
                 "codeparse": StdioMcpServerConfig(
                     command="uv",
@@ -450,15 +453,15 @@ async def _run_claude_query(
         options = ClaudeAgentOptions(
             model=model,
             cwd=str(sqlmesh),
-            tools=CLAUDE_BASELINE_TOOLS,
+            tools=CLAUDE_CODEPARSE_TOOLS,
             mcp_servers={
                 "codeparse": {
                     "command": "uv",
                     "args": _mcp_server_args(sqlmesh),
                 }
             },
-            allowed_tools=[*CLAUDE_BASELINE_TOOLS, "mcp__codeparse__*"],
-            disallowed_tools=CLAUDE_DISALLOWED_WRITE,
+            allowed_tools=[*CLAUDE_CODEPARSE_TOOLS, "mcp__codeparse__*"],
+            disallowed_tools=[*CLAUDE_DISALLOWED_WRITE, "Read"],
             permission_mode="bypassPermissions",
             setting_sources=[],
             strict_mcp_config=True,
