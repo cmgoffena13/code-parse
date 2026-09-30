@@ -176,7 +176,7 @@
     {
       "id": "overview-plan-subsystem",
       "kind": "directory_tree",
-      "prompt": "Summarize the plan / diff subsystem. Name the plan package directory, the sibling context-diff module path, and the four primary types. Answer with exactly these fields on their own lines:\ndirectory: <plan package directory>\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
+      "prompt": "Summarize the plan / diff subsystem. Name the plan package directory, the sibling context-diff module path, and the four primary types for building and applying. Answer with exactly these fields on their own lines:\ndirectory: <plan package directory>\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/plan",
         "sqlmesh/core/context_diff.py",

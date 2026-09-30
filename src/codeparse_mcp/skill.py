@@ -7,7 +7,7 @@ SKILL_INSTRUCTIONS = """\
 ---
 name: codeparse
 description: Use the codeparse MCP Server effectively.
-allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers find_subclasses
+allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers find_subclasses get_project_overview
 ---
 
 # IMPORTANT
@@ -39,6 +39,9 @@ The information that is provided to you will determine the tool you should use.
 
 ## When to use ``find_subclasses``
  - You need the classes that directly inherit a given class.
+
+## When to use ``get_project_overview``
+ - You need the largest directories and where the program starts.
 
 ## When to use ``get_directory_tree``
  - You need to get a summary of the codebase.

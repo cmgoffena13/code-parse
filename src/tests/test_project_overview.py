@@ -1,0 +1,81 @@
+"""Tests for get_project_overview."""
+
+from pathlib import Path
+
+import pytest
+
+from src.codeparse_mcp.project_overview import get_project_overview
+from src.db import CodeDB
+from src.processor import CodeProcessor
+
+
+@pytest.fixture
+def indexed_project(tmp_path: Path) -> Path:
+    (tmp_path / ".gitignore").write_text("# test fixture\n", encoding="utf-8")
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "demo"\n'
+        'version = "0.0.1"\n'
+        "\n"
+        "[project.scripts]\n"
+        'demo = "pkg.cli:main"\n'
+        'missing = "not.a.module:run"\n',
+        encoding="utf-8",
+    )
+    pkg = tmp_path / "pkg"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("", encoding="utf-8")
+    (pkg / "cli.py").write_text(
+        "def main() -> None:\n    pass\n\nif __name__ == '__main__':\n    main()\n",
+        encoding="utf-8",
+    )
+    (pkg / "app.py").write_text("app = object()\n", encoding="utf-8")
+    (pkg / "main.py").write_text(
+        'def run() -> None:\n    pass\n\nif __name__ == "__main__":\n    run()\n',
+        encoding="utf-8",
+    )
+    (pkg / "worker.py").write_text("def work() -> None:\n    pass\n", encoding="utf-8")
+    (pkg / "heavy.py").write_text(
+        "def a() -> None:\n    pass\n\n"
+        "def b() -> None:\n    pass\n\n"
+        "def c() -> None:\n    pass\n\n"
+        "def d() -> None:\n    pass\n",
+        encoding="utf-8",
+    )
+    other = tmp_path / "other"
+    other.mkdir()
+    (other / "small.py").write_text("def one() -> None:\n    pass\n", encoding="utf-8")
+    tests = tmp_path / "tests"
+    tests.mkdir()
+    (tests / "main.py").write_text(
+        "if __name__ == '__main__':\n    pass\n",
+        encoding="utf-8",
+    )
+    db = CodeDB(tmp_path)
+    CodeProcessor(db, tmp_path).process()
+    db.close()
+    return tmp_path
+
+
+def test_project_overview_directories_and_entry_points(indexed_project: Path) -> None:
+    db = CodeDB(indexed_project)
+    try:
+        out = get_project_overview(db)
+    finally:
+        db.close()
+
+    assert out.startswith(f"Project: {indexed_project.name}\n")
+    assert "Legend: S = Symbols, L = Lines, F = Files" in out
+    assert "  • pkg — 8S, 29L, 6F" in out
+    assert out.index("  • pkg —") < out.index("  • other —")
+
+    script_at = out.index("  • pkg/cli.py")
+    app_at = out.index("  • pkg/app.py")
+    main_at = out.index("  • pkg/main.py")
+    assert "pkg.cli.main" not in out
+    assert "not.a.module" not in out
+    assert script_at < app_at < main_at
+    assert out.count("pkg/main.py") == 1
+    assert out.count("pkg/cli.py") == 1
+    assert "tests/main.py" not in out
+    assert "pkg/worker.py" not in out

@@ -10,6 +10,9 @@ from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
 from src.codeparse_mcp.find_subclasses import find_subclasses as run_find_subclasses
+from src.codeparse_mcp.project_overview import (
+    get_project_overview as run_project_overview,
+)
 from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
@@ -53,6 +56,16 @@ mcp = MCPServer("codeparse", instructions=_INSTRUCTIONS, lifespan=_lifespan)
 
 def _processor(ctx: Context) -> CodeProcessor:
     return ctx.request_context.lifespan_context["processor"]
+
+
+@mcp.tool()
+def get_project_overview(ctx: Context) -> str:
+    """
+    Return the ten directories with the most symbols, plus entry points.
+    Entry points come from pyproject.toml scripts, app.py / main.py, and
+    ``if __name__ == "__main__"``. Test files are skipped.
+    """
+    return _processor(ctx).run_query(run_project_overview)
 
 
 @mcp.tool()

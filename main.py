@@ -6,6 +6,7 @@ from src.codeparse_mcp.directory_tree import get_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview
 from src.codeparse_mcp.find_importers import find_importers
 from src.codeparse_mcp.find_subclasses import find_subclasses
+from src.codeparse_mcp.project_overview import get_project_overview
 from src.codeparse_mcp.search_symbols import search_symbols
 from src.codeparse_mcp.symbol_context import get_symbol_context
 from src.db import CodeDB
@@ -57,6 +58,7 @@ def main() -> None:
         "FIND SUBCLASSES",
         find_subclasses(db, "sqlmesh.core.snapshot.evaluator.EvaluationStrategy"),
     )
+    _print_section("PROJECT OVERVIEW", get_project_overview(db))
 
 
 if __name__ == "__main__":
