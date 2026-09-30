@@ -49,7 +49,7 @@ def main() -> None:
         "SYMBOL CONTEXT",
         get_symbol_context(
             db,
-            "sqlmesh.core.dialect.format_model_expressions",
+            "sqlmesh.RuntimeEnv.is_terminal",
             include_references=True,
         ),
     )

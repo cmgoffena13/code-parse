@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
 
 from src.codeparse_mcp.format_utils import lines_range
 from src.db import CodeDB
@@ -45,6 +45,27 @@ def _definition_gutter_width(line_start: int, line_count: int) -> int:
     return len(str(line_start + line_count - 1))
 
 
+def _reference_section_lines(heading: str, items: list) -> list[str]:
+    """Group reference rows by file under ``heading`` with ``L{n}`` bullets."""
+    by_file: OrderedDict[str, list[int]] = OrderedDict()
+    for r in items:
+        path = r["source_path"]
+        by_file.setdefault(path, []).append(int(r["source_line"]))
+
+    lines_out = [
+        "",
+        f"{heading} ({len(items)})",
+        "",
+    ]
+    for path_index, (path, line_nums) in enumerate(by_file.items()):
+        if path_index > 0:
+            lines_out.append("")
+        lines_out.append(path)
+        for line_n in line_nums:
+            lines_out.append(f"  • L{line_n}")
+    return lines_out
+
+
 def get_symbol_context(
     db: CodeDB,
     qualified_name: str,
@@ -54,7 +75,7 @@ def get_symbol_context(
     """
     Return symbol metadata and source for the indexed span. With
     ``include_references=True``, also append reference subsections grouped by
-    ``ref_kind`` (only kinds with at least one row are shown).
+    ``ref_kind`` then file (only kinds with at least one row are shown).
 
     ``qualified_name`` must equal ``symbols.qualified_name`` (module-prefixed for
     Python). Bare names do not match.
@@ -91,9 +112,7 @@ def get_symbol_context(
         body_lines.append(f"    (could not read source file: {e})")
 
     lines: list[str] = [
-        "Legend: L = Line"
-        if not include_references
-        else "Legend: L = Line, • = Reference\n",
+        "Legend: L = Line\n",
         f"Symbol: {key}",
         f"Kind: {row['kind']}",
         f"File: {path}",
@@ -119,11 +138,7 @@ def get_symbol_context(
             items = by_kind.get(kind, [])
             if not items:
                 continue
-            lines.append("")
-            lines.append(f"{heading} ({len(items)})")
-            lines.append("")
-            for r in items:
-                lines.append(f"  • {r['source_path']}:{r['source_line']}")
+            lines.extend(_reference_section_lines(heading, items))
 
         for kind in sorted(by_kind.keys()):
             if kind in covered:
@@ -132,10 +147,6 @@ def get_symbol_context(
             if not items:
                 continue
             title = kind.replace("_", " ").title()
-            lines.append("")
-            lines.append(f"## {title} ({len(items)})")
-            lines.append("")
-            for r in items:
-                lines.append(f"  • {r['source_path']}:{r['source_line']}")
+            lines.extend(_reference_section_lines(f"## {title}", items))
 
     return "\n".join(lines) + "\n"

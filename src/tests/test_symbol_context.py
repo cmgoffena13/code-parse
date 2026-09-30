@@ -53,5 +53,7 @@ def test_symbol_context_include_references_lists_all_refs(tmp_path: Path) -> Non
         assert "pkg/user.py" in out
         assert "tests/test_target.py" in out
         assert "## Calls" in out
+        assert "  • L" in out
+        assert "pkg/user.py:" not in out
     finally:
         db.close()
