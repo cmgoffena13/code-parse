@@ -15,7 +15,7 @@
     {
       "id": "trace-sqlmesh-plan",
       "kind": "call_graph",
-      "prompt": "Trace what happens when a user runs `sqlmesh plan`. Start from the Click CLI command and name the GenericContext method it calls. Answer with exactly these fields on their own lines:\ncli_symbol: <CLI function qualified_name>\ncallee_qualified_name: <plan method qualified_name>\nfile: <file of the plan method>\nlines: <start-end of the plan method>\nevidence: <one short sentence>",
+      "prompt": "Trace what happens when a user runs `sqlmesh plan`. Start from the Click CLI command. Answer with exactly these fields on their own lines:\ncli_symbol: <CLI function qualified_name>\ncallee_qualified_name: <plan method qualified_name>\nfile: <file of the plan method>\nlines: <start-end of the plan method>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.cli.main.plan",
         "sqlmesh.core.context.GenericContext.plan",
@@ -26,7 +26,7 @@
     {
       "id": "callers-context-render",
       "kind": "callers",
-      "prompt": "List every call site of GenericContext.render / Context.render under sqlmesh/ and web/ (exclude tests/). Answer with exactly these fields on their own lines:\nqualified_name: <callee module-prefixed name>\ncallers: <every call site with its file path and line number>\nevidence: <one short sentence>",
+      "prompt": "List every call site of GenericContext.render / Context.render under sqlmesh/ and web/. Answer with exactly these fields on their own lines:\nqualified_name: <callee module-prefixed name>\ncallers: <every call site with its file path and line number>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.core.context.GenericContext.render",
         "sqlmesh/magics.py",
@@ -63,7 +63,7 @@
     {
       "id": "raise-conflicting-plan-error",
       "kind": "refs",
-      "prompt": "Find every place the exception ConflictingPlanError is raised (not merely imported). Answer with exactly these fields on their own lines:\nqualified_name: <the exception's module-prefixed name>\nraise_locations: <every raise site with its file path and line number>\nevidence: <one short sentence>",
+      "prompt": "Find every place the exception ConflictingPlanError is raised. Answer with exactly these fields on their own lines:\nqualified_name: <the exception's module-prefixed name>\nraise_locations: <every raise site with its file path and line number>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh.utils.errors.ConflictingPlanError",
         "sqlmesh/core/plan/evaluator.py",
@@ -127,7 +127,7 @@
     {
       "id": "imports-of-core-dialect",
       "kind": "imports",
-      "prompt": "Which files import from sqlmesh.core.dialect under sqlmesh/ and web/ (exclude tests/)? For each importer, list the imported symbols. Answer with exactly these fields on their own lines:\nimported_module: sqlmesh/core/dialect.py\nimporters: <one line per importer as path — comma-separated symbols>\nevidence: <one short sentence>",
+      "prompt": "Which files import from sqlmesh.core.dialect under sqlmesh/ and web/? For each importer, list the imported symbols. Answer with exactly these fields on their own lines:\nimported_module: sqlmesh/core/dialect.py\nimporters: <one line per importer as path — comma-separated symbols>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/dialect",
         "sqlmesh/__init__.py",
@@ -174,7 +174,7 @@
     {
       "id": "overview-plan-subsystem",
       "kind": "directory_tree",
-      "prompt": "Summarize the plan / diff subsystem without reading every file. Name the plan package directory, the sibling context-diff module path, and the four primary types (plan object, plan builder, plan evaluator, context diff). Answer with exactly these fields on their own lines:\ndirectory: <plan package directory>\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
+      "prompt": "Summarize the plan / diff subsystem. Name the plan package directory, the sibling context-diff module path, and the four primary types. Answer with exactly these fields on their own lines:\ndirectory: <plan package directory>\nrelated_modules: <comma-separated paths>\nkey_types: <comma-separated type names>\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/core/plan",
         "sqlmesh/core/context_diff.py",
@@ -187,7 +187,7 @@
     {
       "id": "trace-forward-only-flag",
       "kind": "call_graph",
-      "prompt": "Where is the CLI flag `--forward-only` handled end-to-end? Identify the Click option site and the GenericContext.plan parameter it feeds. Answer with exactly these fields on their own lines:\ncli_file: <path where --forward-only is declared>\ncli_lines: <line of the option>\ncallee_qualified_name: <plan method that accepts forward_only>\nparam: forward_only\nevidence: <one short sentence>",
+      "prompt": "Where is the CLI flag `--forward-only` handled end-to-end? Answer with exactly these fields on their own lines:\ncli_file: <path where --forward-only is declared>\ncli_lines: <line of the option>\ncallee_qualified_name: <plan method that accepts forward_only>\nparam: forward_only\nevidence: <one short sentence>",
       "must_contain": [
         "sqlmesh/cli/main.py",
         "--forward-only",

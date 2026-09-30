@@ -13,7 +13,9 @@ def test_generate_skill_defaults_to_cwd(
     path = generate_skill()
     assert path == tmp_path / ".claude" / "skills" / "codeparse" / "SKILL.md"
     assert path.is_file()
-    assert "qualified_name" in path.read_text(encoding="utf-8")
+    text = path.read_text(encoding="utf-8")
+    assert "get_symbol_context" in text
+    assert "get_file_overview" in text
 
 
 def test_generate_skill_writes_under_explicit_root(tmp_path: Path) -> None:

@@ -9,7 +9,6 @@ from mcp.server.mcpserver import Context, MCPServer
 from src.codeparse_mcp.directory_tree import get_directory_tree as run_directory_tree
 from src.codeparse_mcp.file_overview import get_file_overview as run_file_overview
 from src.codeparse_mcp.find_importers import find_importers as run_find_importers
-from src.codeparse_mcp.search_symbols import search_symbols as run_symbol_search
 from src.codeparse_mcp.symbol_context import get_symbol_context as run_symbol_context
 from src.db import CodeDB
 from src.processor import CodeProcessor
@@ -56,7 +55,6 @@ def get_directory_tree(ctx: Context, path: str | None = None) -> str:
     """
     Return the repo's directory/file tree with line and symbol counts.
     Optional ``path`` scopes to one directory tree (exact path).
-    Do not call this repeatedly in one task.
     """
     return _processor(ctx).run_query(lambda db: run_directory_tree(db, path=path))
 
@@ -64,33 +62,34 @@ def get_directory_tree(ctx: Context, path: str | None = None) -> str:
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
     """
-    Return imports and a nested symbol tree for one file (``qualified_name`` + line count).
+    Return imports and a nested symbol tree for one file, each with line numbers.
     Use ``get_symbol_context`` for definitions.
     """
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
 
 
-@mcp.tool()
-def search_symbols(
-    query: str,
-    ctx: Context,
-    limit: int = 10,
-    include_tests: bool = False,
-) -> str:
-    """
-    Full-text search across symbols (``qualified_name``, signatures, and docstrings).
-    Excludes test files by default. Set ``include_tests`` to include them.
-    Example queries: ``transpile``, ``loader OR load``, ``dialect AND format``
-    """
-    return _processor(ctx).run_query(
-        lambda db: run_symbol_search(
-            db,
-            query,
-            limit,
-            include_tests=include_tests,
-        )
-    )
+# @mcp.tool()
+# def search_symbols(
+#     query: str,
+#     ctx: Context,
+#     limit: int = 10,
+#     include_tests: bool = False,
+# ) -> str:
+#     """
+#     Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
+#     Excludes test files by default. Set ``include_tests`` to include them.
+#     Use multiple keywords to refine your search.
+#     Example queries: ``loader OR load``, ``dialect AND format``
+#     """
+#     return _processor(ctx).run_query(
+#         lambda db: run_symbol_search(
+#             db,
+#             query,
+#             limit,
+#             include_tests=include_tests,
+#         )
+#     )
 
 
 @mcp.tool()
@@ -102,7 +101,7 @@ def get_symbol_context(
     """
     Return the symbol definition (source lines).
     Excludes references (calls, accesses, type annotations) by default. Set ``include_references`` to include them.
-    Use instead of ``read`` to get symbol definitions.
+    Prefer ``get_symbol_context`` over ``read`` to get symbol definitions.
     """
     name = qualified_name.strip()
     return _processor(ctx).run_query(
@@ -115,7 +114,6 @@ def find_importers(file_path: str, ctx: Context, include_tests: bool = False) ->
     """
     Return files that import a given module file as ``• path:line - symbols``.
     Excludes test files by default; set ``include_tests`` to include them.
-    Use for who-imports / dependency fan-in.
     """
     path = file_path.strip()
     return _processor(ctx).run_query(

@@ -11,8 +11,7 @@ SELECT
     qualified_name,
     name,
     line_start,
-    line_end,
-    line_count
+    line_end
 FROM symbols
 WHERE file_id = ?
 ORDER BY line_start, line_end, qualified_name
@@ -28,11 +27,24 @@ ORDER BY line_number
 """
 
 
+def _line_span(line_start: int, line_end: int) -> str:
+    if line_start == line_end:
+        return f"L{line_start}"
+    return f"L{line_start}-{line_end}"
+
+
+def _gutter_width(*line_numbers: int) -> int:
+    positives = [n for n in line_numbers if n > 0]
+    if not positives:
+        return 1
+    return len(str(max(positives)))
+
+
 def _symbol_label(row) -> str:
-    qn = (row["qualified_name"] or row["name"] or "").strip()
-    n = int(row["line_count"] or 0)
+    loc = _line_span(int(row["line_start"]), int(row["line_end"]))
     kind = row["kind"] or ""
-    return f"{kind}  {qn} ({n}L)"
+    label = (row["qualified_name"] or row["name"] or "").strip()
+    return f"{loc}  {kind}  {label}"
 
 
 def _symbol_branch_lines(
@@ -60,8 +72,8 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     """
     Return imports and a nested symbol tree for one file.
 
-    Each symbol line uses ``qualified_name`` and a line-count ``(NL)`` so
-    callers can pass the name to ``get_symbol_context``. ``file_path`` is
+    Imports use a padded ``L{n}`` gutter (same idea as ``get_symbol_context``).
+    Symbols use ``L{start}[-{end}]  kind  qualified_name``. ``file_path`` is
     normalized to a POSIX path relative to the index root (e.g. ``pkg/mod.py``).
     """
     try:
@@ -84,7 +96,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
     sym_rows = list(db.connection.execute(_SYMBOLS_SQL, (file_id,)))
 
     lines_out: list[str] = [
-        "Legend: L = Lines\n",
+        "Legend: L = Line\n",
         f"File: {file_row['path']}",
         f"Language: {file_row['language'] or '—'}",
         f"Lines: {file_row['line_count']}",
@@ -95,17 +107,25 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
         lines_out.append("_(none)_")
     else:
         # One DB row per imported name from `from m import a, b` repeats the same
-        # statement `signature`; show each distinct signature once.
+        # statement `signature`; show each distinct signature once (first line).
         seen_signatures: set[str] = set()
+        import_lines: list[tuple[int, str]] = []
         for row in imp_rows:
-            sig = (row["signature"] or "").strip()
-            if sig:
-                if sig in seen_signatures:
-                    continue
+            line_n = int(row["line_number"] or 0)
+            sig = (row["signature"] or "").strip() or "—"
+            if sig != "—" and sig in seen_signatures:
+                continue
+            if sig != "—":
                 seen_signatures.add(sig)
-                lines_out.append(sig)
+            import_lines.append((line_n, sig))
+        gutter = _gutter_width(
+            *(n for n, _ in import_lines), int(file_row["line_count"] or 0)
+        )
+        for line_n, sig in import_lines:
+            if line_n > 0:
+                lines_out.append(f"L{line_n:<{gutter}}  {sig}")
             else:
-                lines_out.append("—")
+                lines_out.append(sig)
 
     lines_out.extend(["", f"## Symbols ({len(sym_rows)})"])
 

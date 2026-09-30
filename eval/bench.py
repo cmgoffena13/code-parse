@@ -174,8 +174,7 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
             0,
             "You have the usual read/grep/glob/ls tools plus the codeparse MCP "
             "server. Prefer codeparse tools when they fit (follow this skill); "
-            "otherwise use the built-ins. Do not invent file contents.\n\n"
-            + SKILL_INSTRUCTIONS,
+            "otherwise use the built-ins. \n\n" + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
