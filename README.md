@@ -2,12 +2,17 @@
 
 CodeParse is a codebase indexer that gives agents fast, accurate, and compact context on your Python codebases while reducing token usage.
 
+![Lines of Code](https://aschey.tech/tokei/github/cmgoffena13/codeparse?category=code)![License](https://img.shields.io/badge/license-MIT-informational?style=flat)
+
+---
+
 ## Install as an MCP server
 
 1. Put the `codeparse` binary on your PATH (release asset or `make compile` → `dist/codeparse`).
 2. `codeparse --install-mcp`
 3. `codeparse create-skill cursor` (all projects) or `codeparse create-skill claude` (current project)
 4. Reload the client (or refresh MCP).
+---
 
 ## Benchmark Evaluation (in-progress)
 
