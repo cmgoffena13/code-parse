@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from src.codeparse_mcp.format_utils import file_label
 from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
@@ -34,15 +35,11 @@ def _lines_under_parent(children_by_parent_id, parent_key, branch_prefix):
         if is_directory:
             display_name = row["name"] + "/"
         else:
-            lines_n = row["line_count"] or 0
-            symbols_n = row["symbol_count"] if row["symbol_count"] is not None else 0
-            if lines_n == 0:
-                display_name = row["name"]
-            else:
-                stats = (
-                    f"({lines_n}L)" if symbols_n == 0 else f"({lines_n}L, {symbols_n}S)"
-                )
-                display_name = f"{row['name']} {stats}"
+            display_name = file_label(
+                row["name"],
+                row["line_count"] or 0,
+                row["symbol_count"] if row["symbol_count"] is not None else 0,
+            )
         lines.append(f"{branch_prefix}{connector}{display_name}")
         if is_directory:
             continuation = "    " if is_last_child else "│   "

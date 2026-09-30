@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from src.codeparse_mcp.format_utils import lines_range
 from src.db import CodeDB
 
 _REFERENCE_FETCH_LIMIT = 50
@@ -36,13 +37,6 @@ _REF_KIND_SECTIONS: tuple[tuple[str, str], ...] = (
     ("access", "## Access"),
     ("type_annotation", "## Type Annotations"),
 )
-
-
-def _lines_range_header(line_start: int, line_end: int) -> str:
-    """Human range for the header line (e.g. ``145-148`` or ``145``)."""
-    if line_start == line_end:
-        return str(line_start)
-    return f"{line_start}-{line_end}"
 
 
 def _definition_gutter_width(line_start: int, line_count: int) -> int:
@@ -104,7 +98,7 @@ def get_symbol_context(
         f"Kind: {row['kind']}",
         f"File: {path}",
         f"Language: {lang}",
-        f"Lines: {_lines_range_header(line_start, line_end)}",
+        f"Lines: {lines_range(line_start, line_end)}",
         "",
         "## Definition",
         "",

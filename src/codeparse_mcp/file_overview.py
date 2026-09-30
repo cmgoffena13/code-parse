@@ -1,5 +1,6 @@
 from collections import defaultdict
 
+from src.codeparse_mcp.format_utils import line_span
 from src.codeparse_mcp.paths import normalize_repo_file_path
 from src.db import CodeDB
 
@@ -27,12 +28,6 @@ ORDER BY line_number
 """
 
 
-def _line_span(line_start: int, line_end: int) -> str:
-    if line_start == line_end:
-        return f"L{line_start}"
-    return f"L{line_start}-{line_end}"
-
-
 def _gutter_width(*line_numbers: int) -> int:
     positives = [n for n in line_numbers if n > 0]
     if not positives:
@@ -41,7 +36,7 @@ def _gutter_width(*line_numbers: int) -> int:
 
 
 def _symbol_label(row) -> str:
-    loc = _line_span(int(row["line_start"]), int(row["line_end"]))
+    loc = line_span(int(row["line_start"]), int(row["line_end"]))
     kind = row["kind"] or ""
     label = (row["qualified_name"] or row["name"] or "").strip()
     return f"{loc}  {kind}  {label}"
