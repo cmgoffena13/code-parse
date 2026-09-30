@@ -13,7 +13,7 @@ Python codebase indexer exposed as an MCP server via the `codeparse` CLI.
 
 Ten Questions found in `eval/tasks.json` are evaluated against a baseline agent and an agent with the MCP server.
 
-Cursor Default Model: `grok 4.7`
+Cursor Default Model: `grok 4.7`  
 Claude Defualt Model: `opus 5.5 medium`
 
  - `make eval-smoke` will run all 10 questions and evaluate (default: Cursor).
