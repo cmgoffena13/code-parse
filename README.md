@@ -13,13 +13,15 @@ CodeParse is a codebase indexer that gives agents fast, accurate, and compact co
 
 Ten Questions found in `eval/tasks.json` are evaluated against the [SQLMesh](https://github.com/TobikoData/sqlmesh) repo using a baseline agent and an agent with the CodeParse MCP server.
 
+ - **Total Tokens**: All tokens used by the agent to complete the task.
+ - **Tool Calls**: Count of tool calls, regardless of MCP or builtin.
 ```
 Cursor Benchmark Evaluation - Grok 4.7
 ----------------- Mean -----------------
-Baseline Tokene: 337,737
-Baseline Tool Calls: 20
-CodeParse Tokens: 198,469 (59%)
-CodeParse Tool Calls: 11 (%56)
+Baseline Agent Total Tokene: 337,737
+Baseline Agent Tool Calls: 20
+CodeParse Agent Total Tokens: 198,469 (-41% reduction)
+CodeParse Agent Tool Calls: 11 (-45% reduction)
 ----------------------------------------
 ```
 
