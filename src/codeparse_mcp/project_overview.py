@@ -4,6 +4,7 @@ import re
 import tomllib
 from pathlib import Path
 
+from src.codeparse_mcp.format_utils import file_label
 from src.db import CodeDB
 
 _TOP_DIRECTORIES = 10
@@ -25,7 +26,7 @@ LIMIT ?
 """
 
 _PYTHON_FILES_SQL = """
-SELECT path, name, normalized_path
+SELECT path, name, normalized_path, line_count, symbol_count
 FROM files
 WHERE is_test = 0
     AND (language = 'python' OR name LIKE '%.py')
@@ -61,10 +62,15 @@ def _script_targets(root: Path) -> tuple[list[tuple[str, str]], str | None]:
 def _entry_point_lines(db: CodeDB) -> list[str]:
     """One line per file. Scripts, then ``app.py`` / ``main.py``, then ``__main__``."""
     by_module: dict[str, str] = {}
+    file_stats: dict[str, tuple[int, int]] = {}
     named: set[str] = set()
     guards: set[str] = set()
     for row in db.connection.execute(_PYTHON_FILES_SQL):
         path = row["path"]
+        file_stats[path] = (
+            int(row["line_count"] or 0),
+            int(row["symbol_count"] or 0),
+        )
         module = (row["normalized_path"] or "").lower()
         if module:
             by_module[module] = path
@@ -78,6 +84,10 @@ def _entry_point_lines(db: CodeDB) -> list[str]:
         if _MAIN_GUARD.search(text):
             guards.add(path)
 
+    def _bullet(path: str) -> str:
+        line_count, symbol_count = file_stats.get(path, (0, 0))
+        return f"  • {file_label(path, line_count, symbol_count)}"
+
     scripts, _error = _script_targets(db.root)
     lines: list[str] = []
     claimed: set[str] = set()
@@ -87,14 +97,14 @@ def _entry_point_lines(db: CodeDB) -> list[str]:
         if path is None or path in claimed:
             continue
         claimed.add(path)
-        lines.append(f"  • {path}")
+        lines.append(_bullet(path))
 
     for path in sorted(named - claimed):
-        lines.append(f"  • {path}")
+        lines.append(_bullet(path))
         claimed.add(path)
 
     for path in sorted(guards - claimed):
-        lines.append(f"  • {path}")
+        lines.append(_bullet(path))
 
     return lines or ["No entry points."]
 
@@ -114,7 +124,7 @@ def get_project_overview(db: CodeDB) -> str:
     lines = [
         f"Project: {db.root.name}",
         "",
-        "Legend: S = Symbols, L = Lines, F = Files",
+        "Legend: L = Lines, S = Symbols, F = Files",
         "",
         "Directories - Top 10",
         "",
@@ -124,7 +134,7 @@ def get_project_overview(db: CodeDB) -> str:
             symbols = int(row["symbol_count"])
             line_count = int(row["line_count"])
             files = int(row["file_count"])
-            lines.append(f"  • {row['path']} — {symbols}S, {line_count}L, {files}F")
+            lines.append(f"  • {row['path']} ({line_count}L, {symbols}S, {files}F)")
     else:
         lines.append("No symbols.")
 

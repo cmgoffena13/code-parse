@@ -50,7 +50,7 @@ def main() -> None:
         get_symbol_context(
             db,
             "sqlmesh.core.dialect.format_model_expressions",
-            include_references=False,
+            include_references=True,
         ),
     )
     _print_section("FIND IMPORTERS", find_importers(db, "sqlmesh/core/dialect.py"))

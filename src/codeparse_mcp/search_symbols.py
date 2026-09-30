@@ -1,7 +1,7 @@
 import sqlite3
 from collections import OrderedDict
 
-from src.codeparse_mcp.format_utils import file_label, line_span
+from src.codeparse_mcp.format_utils import line_span
 from src.db import CodeDB
 
 _SYMBOL_SEARCH_SQL = """
@@ -10,8 +10,6 @@ SELECT
     s.line_start,
     s.line_end,
     f.path AS path,
-    f.line_count AS file_line_count,
-    f.symbol_count AS file_symbol_count,
     bm25(symbols_fts) AS rank
 FROM symbols_fts
 INNER JOIN symbols AS s
@@ -49,10 +47,9 @@ def search_symbols(
     docstring). Repo-wide only — use ``get_file_overview`` to map one file.
 
     Query is space-separated phrases/terms, OR'd with prefix matching. Returns
-    ranked hits grouped by file (path + line/symbol counts; each hit has
-    line span + ``qualified_name``, ordered by ``line_start``) for
-    ``get_symbol_context``. By default skips ``is_test`` files; pass
-    ``include_tests=True`` to include them.
+    hits grouped by file (files in BM25 order of first hit; symbols by line),
+    each with rank ``#n`` and line span for ``get_symbol_context``. By default
+    skips ``is_test`` files; pass ``include_tests=True`` to include them.
     """
     stripped = query.strip()
     if not stripped:
@@ -72,39 +69,28 @@ def search_symbols(
     except sqlite3.OperationalError as e:
         return f"Search failed for {query!r} ({fts_query!r}): {e}"
 
-    by_path: OrderedDict[str, list] = OrderedDict()
-    for row in rows:
-        path = row["path"] or ""
-        by_path.setdefault(path, []).append(row)
+    by_path: OrderedDict[str, list[tuple[int, int, int, str]]] = OrderedDict()
+    for rank, row in enumerate(rows, start=1):
+        path = row["path"] or "(unknown path)"
+        qn = (row["qualified_name"] or "").strip()
+        if not qn:
+            continue
+        by_path.setdefault(path, []).append(
+            (rank, int(row["line_start"] or 0), int(row["line_end"] or 0), qn)
+        )
 
     lines: list[str] = [
-        "Legend: L = Line / Lines, S = Symbols\n",
+        "Legend: # = Rank, L = Line\n",
         f'Search results for "{stripped}" ({len(rows)} matches)',
         "",
     ]
-    for path_index, (path, sym_rows) in enumerate(by_path.items()):
+    for path_index, (path, hits) in enumerate(by_path.items()):
         if path_index > 0:
             lines.append("")
-        lines.append(
-            file_label(
-                path,
-                int(sym_rows[0]["file_line_count"] or 0),
-                int(sym_rows[0]["file_symbol_count"] or 0),
-            )
-        )
-        ordered = sorted(
-            sym_rows,
-            key=lambda r: (
-                int(r["line_start"] or 0),
-                int(r["line_end"] or 0),
-                (r["qualified_name"] or ""),
-            ),
-        )
-        for row in ordered:
-            qn = (row["qualified_name"] or "").strip()
-            if not qn:
-                continue
-            loc = line_span(int(row["line_start"] or 0), int(row["line_end"] or 0))
-            lines.append(f"  • {loc}  {qn}")
+        lines.append(path)
+        ordered = sorted(hits, key=lambda item: (item[1], item[2], item[3]))
+        for rank, line_start, line_end, qn in ordered:
+            loc = line_span(line_start, line_end)
+            lines.append(f"  • #{rank} {loc}  {qn}")
 
     return "\n".join(lines).rstrip() + "\n"

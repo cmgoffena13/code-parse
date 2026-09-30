@@ -61,7 +61,7 @@ def _processor(ctx: Context) -> CodeProcessor:
 @mcp.tool()
 def get_project_overview(ctx: Context) -> str:
     """
-    Return the top ten directories and all entry points.
+    Return the top ten directories and all project entry points.
     """
     return _processor(ctx).run_query(run_project_overview)
 
@@ -79,7 +79,7 @@ def get_directory_tree(ctx: Context, path: str | None = None) -> str:
 def get_file_overview(file_path: str, ctx: Context) -> str:
     """
     Return imports and a nested symbol tree for one file, each with line numbers.
-    Use ``get_symbol_context`` for definitions.
+    Use ``get_symbol_context`` for code definitions.
     """
     path = file_path.strip()
     return _processor(ctx).run_query(lambda db: run_file_overview(db, path))
@@ -94,8 +94,8 @@ def search_symbols(
 ) -> str:
     """
     Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
-    Excludes test files by default. Set ``include_tests`` to include them.
-    Use multiple keywords to refine your search. Separate keywords with spaces.
+    Excludes test file symbols by default. Set ``include_tests`` to include them.
+    Use multiple keywords, separated by spaces, to refine your search.
     Example queries: ``loader``, ``dialect format``
     """
     return _processor(ctx).run_query(
@@ -115,8 +115,8 @@ def get_symbol_context(
     include_references: bool = False,
 ) -> str:
     """
-    Return the symbol definition (source lines).
-    Excludes references (calls, accesses, type annotations) by default. Set ``include_references`` to include them.
+    Return the symbol code definition and references (calls, accesses, type annotations).
+    Excludes references by default. Set ``include_references`` to include them.
     """
     name = qualified_name.strip()
     return _processor(ctx).run_query(

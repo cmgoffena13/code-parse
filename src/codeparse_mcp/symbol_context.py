@@ -100,7 +100,7 @@ def get_symbol_context(
         f"Language: {lang}",
         f"Lines: {lines_range(line_start, line_end)}",
         "",
-        "## Definition",
+        "## Code Definition",
         "",
     ]
     lines.extend(body_lines)
@@ -121,6 +121,7 @@ def get_symbol_context(
                 continue
             lines.append("")
             lines.append(f"{heading} ({len(items)})")
+            lines.append("")
             for r in items:
                 lines.append(f"  • {r['source_path']}:{r['source_line']}")
 
@@ -133,6 +134,7 @@ def get_symbol_context(
             title = kind.replace("_", " ").title()
             lines.append("")
             lines.append(f"## {title} ({len(items)})")
+            lines.append("")
             for r in items:
                 lines.append(f"  • {r['source_path']}:{r['source_line']}")
 

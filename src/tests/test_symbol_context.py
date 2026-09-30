@@ -37,7 +37,7 @@ def test_symbol_context_definition_omits_references_by_default(tmp_path: Path) -
     db = CodeDB(root)
     try:
         out = get_symbol_context(db, "pkg.target.helper")
-        assert "## Definition" in out
+        assert "## Code Definition" in out
         assert "pkg/user.py" not in out
         assert "tests/test_target.py" not in out
         assert "## Calls" not in out

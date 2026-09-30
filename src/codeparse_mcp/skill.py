@@ -10,39 +10,40 @@ description: Use the codeparse MCP Server effectively.
 allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context find_importers find_subclasses get_project_overview
 ---
 
-# IMPORTANT
- - ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of ``read`` to get symbol information.
- - Only call tools to get enough information to accomplish the task.
- - Do not call tools to get more information on symbol references unless absolutely necessary.
+IMPORTANT: ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of ``read`` to get symbol information.
 
 The information that is provided to you will determine the tool you should use.
 
 ## You are given the file name.
 1. Use ``get_file_overview`` to get a summary of the symbols in the file.
-2. Use ``get_symbol_context`` to get the code of the symbol. 
+2. Use ``get_symbol_context`` to get the code definition of the symbol. 
 
-## You are given the file name and symbol name.
-1. Use ``get_symbol_context`` to get the code of the symbol. 
+## You are given the file name and exact symbol name.
+1. Use ``get_symbol_context`` to get the code definition of the symbol. 
 
-## You are NOT given the file name or symbol name. 
+## You are NOT given the file name or exact symbol name. 
 1. Investigate the codebase using ``get_project_overview`` and keywords. 
 2. Use ``get_file_overview`` to get a summary of the symbols in the file.
-3. Use ``get_symbol_context`` to get the code of the symbol.
+3. Use ``get_symbol_context`` to get the code definition of the symbol.
 
 ## How to investigate the codebase using keywords
- - Use ``glob`` when the clue is a path or a file name.
- - Use ``grep`` when the clue is specific text in file contents.
- - Use ``search_symbols`` when the clue is a symbol name or phrase referencing a symbol.
+### ``glob``
+ - Use when the clue is a path or a file name.
+ - DO NOT glob for specific directory files, use ``get_directory_tree`` instead with the path.
+### ``grep``
+ - Use when the clue is specific text in file contents.
+ - DO NOT grep for symbol names, use ``search_symbols`` instead.
+ - DO NOT grep for import statements, use ``find_importers`` or ``get_symbol_context`` with ``include_references=True`` instead.
+### ``search_symbols``
+ - Use when the clue is part of a symbol name, signature, or docstring.
+ - Set the limit to 5 if you know the local symbol name, but need the qualified name.
 
 ## When to use ``find_importers``
- - You need to find all the files that import a given file or symbol.
+ - You need to find all files that import a given file
+ - You need to find all files that import a symbol from the given file.
 
 ## When to use ``find_subclasses``
  - You need the classes that directly inherit a given class.
-
-## When to use ``get_project_overview``
- - You need the largest directories and where commands are triggered.
- - Use to start an investigation of the codebase.
 
 ## When to use ``get_directory_tree``
  - You need to get a summary of the files of the codebase.

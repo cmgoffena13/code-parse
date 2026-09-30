@@ -1,5 +1,7 @@
 """Classes that directly inherit from a given class."""
 
+from collections import OrderedDict
+
 from src.db import CodeDB
 
 _MAX_SUBCLASSES = 100
@@ -27,7 +29,8 @@ def find_subclasses(
     List classes whose base list includes ``qualified_name``.
 
     One hop only: ``class Grand(Child)`` is not listed for ``Parent``. Test
-    files are skipped unless ``include_tests`` is true.
+    files are skipped unless ``include_tests`` is true. Hits are grouped by
+    file with line numbers.
     """
     key = qualified_name.strip()
     if not key:
@@ -47,15 +50,22 @@ def find_subclasses(
     total = len(rows)
     shown = rows[:_MAX_SUBCLASSES]
     label = "class" if total == 1 else "classes"
+
+    by_file: OrderedDict[str, list] = OrderedDict()
+    for row in shown:
+        by_file.setdefault(row["file_path"], []).append(row)
+
     lines_out = [
-        "Legend: • path:line - qualified_name\n",
+        "Legend: L = Line\n",
         f"Subclasses of {key} — {total} {label}",
         "",
     ]
-    for row in shown:
-        lines_out.append(
-            f"  • {row['file_path']}:{int(row['line_start'])} - {row['qualified_name']}"
-        )
+    for path_index, (path, sym_rows) in enumerate(by_file.items()):
+        if path_index > 0:
+            lines_out.append("")
+        lines_out.append(path)
+        for row in sym_rows:
+            lines_out.append(f"  • L{int(row['line_start'])}  {row['qualified_name']}")
 
     if total > _MAX_SUBCLASSES:
         omitted = total - _MAX_SUBCLASSES

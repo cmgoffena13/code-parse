@@ -65,9 +65,9 @@ def test_project_overview_directories_and_entry_points(indexed_project: Path) ->
         db.close()
 
     assert out.startswith(f"Project: {indexed_project.name}\n")
-    assert "Legend: S = Symbols, L = Lines, F = Files" in out
-    assert "  • pkg — 8S, 29L, 6F" in out
-    assert out.index("  • pkg —") < out.index("  • other —")
+    assert "Legend: L = Lines, S = Symbols, F = Files" in out
+    assert "  • pkg (29L, 8S, 6F)" in out
+    assert out.index("  • pkg (") < out.index("  • other (")
 
     script_at = out.index("  • pkg/cli.py")
     app_at = out.index("  • pkg/app.py")
@@ -77,5 +77,11 @@ def test_project_overview_directories_and_entry_points(indexed_project: Path) ->
     assert script_at < app_at < main_at
     assert out.count("pkg/main.py") == 1
     assert out.count("pkg/cli.py") == 1
+    assert any(
+        line.startswith("  • pkg/cli.py (")
+        and "L" in line
+        and line.rstrip().endswith("S)")
+        for line in out.splitlines()
+    )
     assert "tests/main.py" not in out
     assert "pkg/worker.py" not in out
