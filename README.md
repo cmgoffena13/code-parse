@@ -1,6 +1,6 @@
-# codeparse
+# CodeParse
 
-Python codebase indexer exposed as an MCP server via the `codeparse` CLI.
+CodeParse is a codebase indexer that gives agents fast, accurate, and compact context on your Python codebases while reducing token usage.
 
 ## Install as an MCP server
 
