@@ -31,7 +31,9 @@ def path_spec_for_indexing(root: Path) -> PathSpec:
     root = root.resolve()
     gitignore_path = root / ".gitignore"
     if not gitignore_path.is_file():
-        raise FileNotFoundError(f".gitignore not found at {gitignore_path}")
+        raise FileNotFoundError(
+            f".gitignore not found at {gitignore_path}; are you in a git repository?"
+        )
     return _path_spec_for_root(gitignore_path, gitignore_path.stat().st_mtime)
 
 

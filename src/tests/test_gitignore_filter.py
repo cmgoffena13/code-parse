@@ -53,7 +53,7 @@ def test_directory_only_trailing_slash(tmp_path: Path) -> None:
 
 
 def test_path_spec_for_indexing_missing_file_raises(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError):
+    with pytest.raises(FileNotFoundError, match="are you in a git repository"):
         path_spec_for_indexing(tmp_path)
 
 

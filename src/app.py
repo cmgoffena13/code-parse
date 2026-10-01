@@ -14,6 +14,20 @@ def _require_dir(path: Path) -> Path | None:
     return resolved
 
 
+def _require_indexable_root(path: Path) -> Path | None:
+    root = _require_dir(path)
+    if root is None:
+        return None
+    gitignore = root / ".gitignore"
+    if not gitignore.is_file():
+        print(
+            f".gitignore not found at {gitignore}; are you in a git repository?",
+            file=sys.stderr,
+        )
+        return None
+    return root
+
+
 def _run_index(root: Path, *, full: bool) -> int:
     from src.db import CodeDB
     from src.processor import CodeProcessor
@@ -57,7 +71,7 @@ def main() -> int:
         print(f"Wrote skill → {path}")
         return 0
     if args.command == "index":
-        root = _require_dir(args.cwd)
+        root = _require_indexable_root(args.cwd)
         if root is None:
             return 1
         return _run_index(root, full=args.full_reload)
@@ -70,7 +84,7 @@ def main() -> int:
                 print("Restart the client (or reload MCP) to pick up the change.")
                 return 0
             return 1
-        root = _require_dir(args.cwd)
+        root = _require_indexable_root(args.cwd)
         if root is None:
             return 1
         return _run_mcp(root)
