@@ -613,9 +613,10 @@ class PythonParser(ParserBase):
         elif node.type == "attribute":
             self._extract_reference(node, "access", file_id)
         else:
-            type_node = node.child_by_field_name("type")
-            if type_node is not None:
-                self._extract_reference(type_node, "type_annotation", file_id)
+            for field in ("type", "return_type"):
+                type_node = node.child_by_field_name(field)
+                if type_node is not None:
+                    self._extract_reference(type_node, "type_annotation", file_id)
 
     def _extract_symbol(
         self, node: Node, file_id: int, file_bytes: bytes

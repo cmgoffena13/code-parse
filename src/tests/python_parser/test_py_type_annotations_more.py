@@ -21,3 +21,19 @@ def test_type_annotations_optional_generics_and_forward_refs(
         r["ref_kind"] == "type_annotation" and r["ref_symbol_name"] == '"Path"'
         for r in references
     )
+
+
+def test_return_type_annotation_is_indexed(python_parser, fixture_bytes):
+    file_bytes = fixture_bytes("return_type_annotation.py")
+    symbols, _imports, references = python_parser.parse(
+        14, file_bytes, module_qn="pkg.mod"
+    )
+
+    assert any(s["qualified_name"] == "pkg.mod.Worker" for s in symbols)
+    assert_symbol_references_invariants(references)
+    assert any(
+        r["ref_kind"] == "type_annotation"
+        and r["ref_symbol_name"] == "Worker"
+        and r["ref_symbol_qualified_name"] == "pkg.mod.Worker"
+        for r in references
+    )
