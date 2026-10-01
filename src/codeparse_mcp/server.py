@@ -127,6 +127,7 @@ def get_symbol_references(
 ) -> str:
     """
     Return reference sites for a symbol (calls, accesses, type annotations) and which symbols they happen in.
+    Does not follow attribute chains on other objects, untyped locals, or cross-file field hops.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     name = qualified_name.strip()
