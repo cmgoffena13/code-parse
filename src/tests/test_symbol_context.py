@@ -75,7 +75,7 @@ def test_symbol_references_lists_calls_with_counts(tmp_path: Path) -> None:
         assert "  • L" in out
         assert "pkg.user.run" in out
         assert "pkg/user.py:" not in out
-        assert "(" in out  # kind and/or file counts
+        assert "(" in out  # kind section counts
     finally:
         db.close()
 

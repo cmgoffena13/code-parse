@@ -96,9 +96,9 @@ def search_symbols(
 ) -> str:
     """
     Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
-    Ranks results by relevance to the query.
+    Ranks results by text relevance to the query.
     Excludes test file symbols by default; set ``include_tests`` to include them.
-    Use multiple keywords, separated by spaces, to expand/refine your search.
+    Use multiple keywords, separated by spaces, to narrow your search.
     Example queries: ``loader``, ``dialect format``
     """
     return _processor(ctx).run_query(
@@ -126,7 +126,7 @@ def get_symbol_references(
     qualified_name: str, ctx: Context, include_tests: bool = False
 ) -> str:
     """
-    Return reference sites for a symbol (calls, accesses, type annotations).
+    Return reference sites for a symbol (calls, accesses, type annotations) and which symbols they happen in.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     name = qualified_name.strip()

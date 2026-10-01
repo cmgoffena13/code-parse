@@ -79,7 +79,7 @@ def _section_lines(
     for path_index, (path, sites) in enumerate(by_file.items()):
         if path_index > 0:
             lines_out.append("")
-        lines_out.append(f"{path} ({len(sites)})")
+        lines_out.append(path)
         for file_id, line_n in sites:
             qn = _enclosing_qn(spans_by_file.get(file_id, []), line_n)
             if qn:
