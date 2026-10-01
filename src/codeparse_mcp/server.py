@@ -80,7 +80,7 @@ def get_directory_tree(ctx: Context, path: str | None = None) -> str:
 @mcp.tool()
 def get_file_overview(file_path: str, ctx: Context) -> str:
     """
-    Return imports and a nested symbol tree for one file, each with line numbers.
+    Return imports and a nested symbol tree for one file with line numbers.
     Use ``get_symbol_context`` for code definitions.
     """
     path = file_path.strip()
@@ -115,6 +115,7 @@ def search_symbols(
 def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     """
     Return the symbol code definition and aggregated count of reference sites (calls, accesses, type annotations).
+    References do not follow multi-hop attribute access (obj.field.method), untyped locals, or cross-file field hops.
     Use ``get_symbol_references`` for detailed call, access, and type-annotation sites.
     """
     name = qualified_name.strip()
@@ -127,7 +128,7 @@ def get_symbol_references(
 ) -> str:
     """
     Return reference sites for a symbol (calls, accesses, type annotations) and which symbols they happen in.
-    Does not follow attribute chains on other objects, untyped locals, or cross-file field hops.
+    References do not follow multi-hop attribute access (obj.field.method), untyped locals, or cross-file field hops.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     name = qualified_name.strip()
