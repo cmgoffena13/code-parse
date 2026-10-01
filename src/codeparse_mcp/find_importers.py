@@ -46,7 +46,6 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
     paths = [row["importer_path"] for row in rows]
     total = len(paths)
     lines_out = [
-        "Legend: • path\n",
         f"Importers of {path} — {total} files",
         "",
         *(f"  • {p}" for p in paths[:_MAX_IMPORTER_FILES]),
