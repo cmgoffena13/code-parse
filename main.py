@@ -54,7 +54,10 @@ def main() -> None:
         "SYMBOL REFERENCES",
         get_symbol_references(db, "sqlmesh.RuntimeEnv.is_terminal"),
     )
-    _print_section("FIND IMPORTERS", find_importers(db, "sqlmesh/core/dialect.py"))
+    _print_section(
+        "FIND IMPORTERS",
+        find_importers(db, "sqlmesh/core/dialect.py", include_tests=True),
+    )
     _print_section(
         "FIND SUBCLASSES",
         find_subclasses(db, "sqlmesh.core.snapshot.evaluator.EvaluationStrategy"),

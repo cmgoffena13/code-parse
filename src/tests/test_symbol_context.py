@@ -39,7 +39,7 @@ def test_symbol_context_definition_only(tmp_path: Path) -> None:
     try:
         out = get_symbol_context(db, "pkg.target.helper")
         assert "## Code Definition" in out
-        assert "## References - 2" in out
+        assert "## References (2)" in out
         assert "Calls: 2" in out
         assert "Access: 0" in out
         assert "Type Annotations: 0" in out

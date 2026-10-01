@@ -152,7 +152,7 @@ def find_subclasses(
 @mcp.tool()
 def find_importers(file_path: str, ctx: Context, include_tests: bool = False) -> str:
     """
-    Return files that import a given module file, with line and imported symbols.
+    Return files that import a given module file.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     path = file_path.strip()

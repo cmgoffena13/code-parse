@@ -97,7 +97,7 @@ def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
     ]
     lines.extend(body_lines)
     ref_total, ref_lines = _reference_totals(db, key)
-    lines.extend(["", f"## References - {ref_total}", ""])
+    lines.extend(["", f"## References ({ref_total})", ""])
     lines.extend(ref_lines)
 
     return "\n".join(lines) + "\n"

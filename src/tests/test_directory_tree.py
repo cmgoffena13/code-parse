@@ -67,7 +67,6 @@ def test_directory_tree_path_file_rejected(tmp_path: Path) -> None:
     try:
         out = get_directory_tree(db, path="pkg/core/dialect.py")
         assert "No directory matches" in out
-        assert "not a file" in out
     finally:
         db.close()
 

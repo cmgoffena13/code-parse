@@ -97,10 +97,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
         (path,),
     ).fetchone()
     if file_row is None:
-        return (
-            f"No file matches {path!r}. "
-            f"Use a repo-relative path (relative to {db.root})."
-        )
+        return f"No file matches {path!r}."
 
     file_id = file_row["id"]
     imp_rows = list(db.connection.execute(_IMPORTS_SQL, (file_id,)))
