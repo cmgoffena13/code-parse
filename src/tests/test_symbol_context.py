@@ -14,7 +14,13 @@ def _index(tmp_path: Path) -> Path:
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
     (pkg / "target.py").write_text(
-        "def helper() -> int:\n    return 1\n",
+        "def helper() -> int:\n"
+        "    return 1\n"
+        "\n"
+        "\n"
+        "class Worker:\n"
+        "    def run(self) -> int:\n"
+        "        return helper()\n",
         encoding="utf-8",
     )
     (pkg / "user.py").write_text(
@@ -39,13 +45,19 @@ def test_symbol_context_definition_only(tmp_path: Path) -> None:
     try:
         out = get_symbol_context(db, "pkg.target.helper")
         assert "## Code Definition" in out
-        assert "## References (2)" in out
-        assert "Calls: 2" in out
+        assert "## References (3)" in out
+        assert "Calls: 3" in out
         assert "Access: 0" in out
         assert "Type Annotations: 0" in out
+        assert "Parent:" not in out
         assert "pkg/user.py" not in out
         assert "tests/test_target.py" not in out
         assert "## Calls" not in out
+
+        method = get_symbol_context(db, "pkg.target.Worker.run")
+        assert "Parent: pkg.target.Worker" in method
+        assert method.index("Symbol:") < method.index("Parent:")
+        assert method.index("Parent:") < method.index("Kind:")
     finally:
         db.close()
 
@@ -61,6 +73,7 @@ def test_symbol_references_lists_calls_with_counts(tmp_path: Path) -> None:
         assert "tests/test_target.py" not in out
         assert "## Calls" in out
         assert "  • L" in out
+        assert "pkg.user.run" in out
         assert "pkg/user.py:" not in out
         assert "(" in out  # kind and/or file counts
     finally:

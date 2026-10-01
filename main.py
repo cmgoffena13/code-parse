@@ -45,14 +45,18 @@ def main() -> None:
 
     _print_section("DIRECTORY TREE", get_directory_tree(db, "sqlmesh/core/"))
     _print_section("FILE OVERVIEW", get_file_overview(db, "sqlmesh/core/dialect.py"))
-    _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model"))
+    _print_section(
+        "SEARCH SYMBOLS", search_symbols(db, "format_model", include_tests=True)
+    )
     _print_section(
         "SYMBOL CONTEXT",
         get_symbol_context(db, "sqlmesh.RuntimeEnv.is_terminal"),
     )
     _print_section(
         "SYMBOL REFERENCES",
-        get_symbol_references(db, "sqlmesh.RuntimeEnv.is_terminal"),
+        get_symbol_references(
+            db, "sqlmesh.core.snapshot.evaluator.EvaluationStrategy", include_tests=True
+        ),
     )
     _print_section(
         "FIND IMPORTERS",
