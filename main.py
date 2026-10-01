@@ -55,7 +55,9 @@ def main() -> None:
     _print_section(
         "SYMBOL REFERENCES",
         get_symbol_references(
-            db, "sqlmesh.core.snapshot.evaluator.EvaluationStrategy", include_tests=True
+            db,
+            "sqlmesh.core.snapshot.definition.DeployabilityIndex.is_representative",
+            include_tests=True,
         ),
     )
     _print_section(

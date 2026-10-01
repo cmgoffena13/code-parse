@@ -34,6 +34,7 @@ class PythonParser(ParserBase):
         self.symbols_references_snapshot = {}
         self.imports_snapshot = {}
         self._class_param_annos: dict[str, dict[str, str]] = {}
+        self._func_param_annos: dict[str, dict[str, str]] = {}
         self._ref_root_module: dict[str, str] = {}
         self._import_qn: dict[str, str] = {}
         self._module_qn: str = ""
@@ -50,6 +51,7 @@ class PythonParser(ParserBase):
         self._module_qn = module_qn
         self._is_package = is_package
         self._class_param_annos = {}
+        self._func_param_annos = {}
         self._ref_root_module = {}
         self._import_qn = {}
         self.symbols = []
@@ -431,15 +433,20 @@ class PythonParser(ParserBase):
                         symbol_id = self.symbols_snapshot[key]["id"]
                         is_test = self._snapshot_branch_is_test(kind, name)
             if symbol_id is not None and scope_path is not None and kind is not None:
-                if (
-                    name == "__init__"
-                    and kind == "method"
-                    and node.type == "function_definition"
-                    and self.stack
-                    and self.stack[-1].kind == "class"
+                if kind in ("function", "method") and node.type in (
+                    "function_definition",
+                    "async_function_definition",
                 ):
-                    annos = self._ctor_param_types_from_function(node)
+                    annos = self._param_types_from_function(node)
                     if annos:
+                        self._func_param_annos[scope_path] = annos
+                    if (
+                        name == "__init__"
+                        and kind == "method"
+                        and self.stack
+                        and self.stack[-1].kind == "class"
+                        and annos
+                    ):
                         self._class_param_annos[self.stack[-1].qualified_name] = annos
                 self.stack.append(StackFrame(symbol_id, scope_path, kind, is_test))
                 pushed_stack = True
@@ -468,19 +475,65 @@ class PythonParser(ParserBase):
             popped = self.stack[-1]
             if popped.kind == "class":
                 self._class_param_annos.pop(popped.qualified_name, None)
+            elif popped.kind in ("function", "method"):
+                self._func_param_annos.pop(popped.qualified_name, None)
             self.stack.pop()
 
-    def _simple_annotation_type_name(self, type_node: Node | None) -> str | None:
-        """Single identifier annotations only (e.g. `CodeDB`); else None."""
+    @staticmethod
+    def _is_optional_type_value(node: Node) -> bool:
+        if node.text is None:
+            return False
+        text = node.text.decode("utf-8")
+        return text in ("Optional", "typing.Optional", "t.Optional")
+
+    def _annotation_type_name(self, type_node: Node | None) -> str | None:
+        """Bare identifier/attribute, or inner type of Optional[...] / typing.Optional / t.Optional."""
         if type_node is None:
             return None
-        for child in type_node.children:
-            if child.type == "identifier" and child.text is not None:
-                return child.text.decode("utf-8")
+        node = type_node
+        # ``type`` field wraps the expression; unwrap one level when needed.
+        if node.type == "type" and node.named_child_count == 1:
+            node = node.named_children[0]
+        if node.type in ("identifier", "attribute", "dotted_name"):
+            if node.text is None:
+                return None
+            return node.text.decode("utf-8")
+        if node.type == "subscript":
+            value = node.child_by_field_name("value")
+            if value is None or not self._is_optional_type_value(value):
+                return None
+            for child in node.named_children:
+                if child == value:
+                    continue
+                if child.type in ("identifier", "attribute", "dotted_name"):
+                    if child.text is None:
+                        return None
+                    return child.text.decode("utf-8")
+                if child.type == "type":
+                    return self._annotation_type_name(child)
+            return None
+        if node.type == "generic_type":
+            # Optional[X] (PEP 585-style tree): identifier + type_parameter
+            if node.named_child_count < 2:
+                return None
+            head = node.named_children[0]
+            if not self._is_optional_type_value(head):
+                return None
+            type_param = node.named_children[1]
+            if type_param.type != "type_parameter":
+                return None
+            for child in type_param.named_children:
+                if child.type == "type":
+                    return self._annotation_type_name(child)
+                if child.type in ("identifier", "attribute", "dotted_name"):
+                    if child.text is None:
+                        return None
+                    return child.text.decode("utf-8")
+            return None
         return None
 
-    def _ctor_param_types_from_function(self, node: Node) -> dict[str, str]:
-        """Map __init__ parameter names to simple annotated type names."""
+    def _param_types_from_function(self, node: Node) -> dict[str, str]:
+        """Map typed parameter names to annotation type names (Optional peeled)."""
         out: dict[str, str] = {}
         params = node.child_by_field_name("parameters")
         if params is None:
@@ -497,7 +550,7 @@ class PythonParser(ParserBase):
                     ann = c
             if not param_name or param_name in ("self", "cls"):
                 continue
-            simple = self._simple_annotation_type_name(ann)
+            simple = self._annotation_type_name(ann)
             if simple:
                 out[param_name] = simple
         return out
@@ -960,7 +1013,6 @@ class PythonParser(ParserBase):
 
         # Resolved qualified_name for self./cls. when parent class is on the stack.
         resolved_qualified = None
-        used_ctor_param_type = False
         if target_name.startswith(("self.", "cls.")):
             suffix = target_name.split(".", 1)[1]
             first_seg, _, rest_after_first = suffix.partition(".")
@@ -970,24 +1022,30 @@ class PythonParser(ParserBase):
                 class_qn = entry.qualified_name
                 ctor_map = self._class_param_annos.get(class_qn)
                 if ctor_map and first_seg in ctor_map:
-                    type_name = ctor_map[first_seg]
+                    type_qn = self._resolve_ref_qn(ctor_map[first_seg])
                     resolved_qualified = (
-                        f"{type_name}.{rest_after_first}"
-                        if rest_after_first
-                        else type_name
+                        f"{type_qn}.{rest_after_first}" if rest_after_first else type_qn
                     )
-                    used_ctor_param_type = True
                 else:
                     resolved_qualified = f"{class_qn}.{suffix}"
                 break
             else:
                 if self.stack:
                     resolved_qualified = f"{self.stack[-1].qualified_name}.{suffix}"
+        else:
+            root, sep, rest = target_name.partition(".")
+            if sep:
+                for entry in reversed(self.stack):
+                    if entry.kind not in ("function", "method"):
+                        continue
+                    param_map = self._func_param_annos.get(entry.qualified_name)
+                    if param_map and root in param_map:
+                        type_qn = self._resolve_ref_qn(param_map[root])
+                        resolved_qualified = f"{type_qn}.{rest}" if rest else type_qn
+                    break
 
-        if used_ctor_param_type and resolved_qualified is not None:
-            ref_symbol_qualified_name = self._resolve_ref_qn(resolved_qualified)
-        elif resolved_qualified is not None:
-            # class_qn / stack paths are already module-prefixed when module_qn is set.
+        if resolved_qualified is not None:
+            # class_qn / stack paths and param-rewritten QNs are already module-prefixed.
             ref_symbol_qualified_name = resolved_qualified
         else:
             ref_symbol_qualified_name = self._resolve_ref_qn(target_name)

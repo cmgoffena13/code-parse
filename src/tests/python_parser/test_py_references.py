@@ -206,3 +206,21 @@ def test_ctor_param_imported_type_rewrites_via_import_qn(python_parser, fixture_
         if r["ref_kind"] == "access" and r["ref_symbol_name"] == "self.dep"
     )
     assert access["ref_symbol_qualified_name"] == "other.types.DependencyType"
+
+
+def test_param_receiver_call_resolves_via_annotation(python_parser, fixture_bytes):
+    file_bytes = fixture_bytes("param_receiver_call.py")
+    _, _, references = python_parser.parse(56, file_bytes, module_qn="pkg.mod")
+
+    assert_symbol_references_invariants(references)
+    calls = [
+        r
+        for r in references
+        if r["ref_kind"] == "call"
+        and r["ref_symbol_name"] == "deployability_index.is_representative"
+    ]
+    assert len(calls) == 3
+    assert all(
+        r["ref_symbol_qualified_name"] == "pkg.mod.DeployabilityIndex.is_representative"
+        for r in calls
+    )
