@@ -35,12 +35,14 @@ def _definition_gutter_width(line_start: int, line_count: int) -> int:
     return len(str(line_start + line_count - 1))
 
 
-def _reference_totals(db: CodeDB, qualified_name: str) -> list[str]:
+def _reference_totals(db: CodeDB, qualified_name: str) -> tuple[int, list[str]]:
     counts = {
         row["ref_kind"]: int(row["n"])
         for row in db.connection.execute(_REF_KIND_COUNTS_SQL, (qualified_name,))
     }
-    return [f"{label}: {counts.get(kind, 0)}" for kind, label in _REF_KIND_LABELS]
+    total = sum(counts.get(kind, 0) for kind, _ in _REF_KIND_LABELS)
+    lines = [f"{label}: {counts.get(kind, 0)}" for kind, label in _REF_KIND_LABELS]
+    return total, lines
 
 
 def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
@@ -94,7 +96,8 @@ def get_symbol_context(db: CodeDB, qualified_name: str) -> str:
         "",
     ]
     lines.extend(body_lines)
-    lines.extend(["", "## References", ""])
-    lines.extend(_reference_totals(db, key))
+    ref_total, ref_lines = _reference_totals(db, key)
+    lines.extend(["", f"## References - {ref_total}", ""])
+    lines.extend(ref_lines)
 
     return "\n".join(lines) + "\n"

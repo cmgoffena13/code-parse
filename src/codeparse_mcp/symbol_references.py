@@ -15,6 +15,7 @@ FROM symbol_references AS sr
 INNER JOIN files AS f
     ON f.id = sr.source_file_id
 WHERE sr.ref_symbol_qualified_name = ?
+{test_filter}
 ORDER BY sr.ref_kind, f.path, sr.source_line
 """
 
@@ -46,18 +47,28 @@ def _section_lines(heading: str, total: int, rows: list) -> list[str]:
     return lines_out
 
 
-def get_symbol_references(db: CodeDB, qualified_name: str) -> str:
+def get_symbol_references(
+    db: CodeDB, qualified_name: str, *, include_tests: bool = False
+) -> str:
     """
     List reference sites for ``qualified_name``, grouped by ``ref_kind`` then file.
 
     Each kind and file header includes a count. At most ``_MAX_PER_KIND`` rows are
-    shown per kind; totals still reflect every stored reference.
+    shown per kind; totals still reflect every stored reference (after the test
+    filter). Test files are skipped unless ``include_tests`` is true.
     """
     key = qualified_name.strip()
     if not key:
         return "No symbol name given; pass a non-empty qualified_name."
 
-    rows = list(db.connection.execute(_REFERENCES_SQL, (key,)))
+    rows = list(
+        db.connection.execute(
+            _REFERENCES_SQL.format(
+                test_filter="" if include_tests else "    AND f.is_test = 0"
+            ),
+            (key,),
+        )
+    )
     if not rows:
         return f"No references to {key} were found."
 

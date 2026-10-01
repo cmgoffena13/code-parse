@@ -39,7 +39,7 @@ def test_symbol_context_definition_only(tmp_path: Path) -> None:
     try:
         out = get_symbol_context(db, "pkg.target.helper")
         assert "## Code Definition" in out
-        assert "## References" in out
+        assert "## References - 2" in out
         assert "Calls: 2" in out
         assert "Access: 0" in out
         assert "Type Annotations: 0" in out
@@ -58,11 +58,22 @@ def test_symbol_references_lists_calls_with_counts(tmp_path: Path) -> None:
         assert "References of pkg.target.helper" in out
         assert "total" in out
         assert "pkg/user.py" in out
-        assert "tests/test_target.py" in out
+        assert "tests/test_target.py" not in out
         assert "## Calls" in out
         assert "  • L" in out
         assert "pkg/user.py:" not in out
         assert "(" in out  # kind and/or file counts
+    finally:
+        db.close()
+
+
+def test_symbol_references_include_tests(tmp_path: Path) -> None:
+    root = _index(tmp_path)
+    db = CodeDB(root)
+    try:
+        out = get_symbol_references(db, "pkg.target.helper", include_tests=True)
+        assert "pkg/user.py" in out
+        assert "tests/test_target.py" in out
     finally:
         db.close()
 

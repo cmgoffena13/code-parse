@@ -96,8 +96,9 @@ def search_symbols(
 ) -> str:
     """
     Full-text search across all symbols (``qualified_name``, signatures, and docstrings).
-    Excludes test file symbols by default. Set ``include_tests`` to include them.
-    Use multiple keywords, separated by spaces, to refine your search.
+    Ranks results by relevance to the query.
+    Excludes test file symbols by default; set ``include_tests`` to include them.
+    Use multiple keywords, separated by spaces, to expand/refine your search.
     Example queries: ``loader``, ``dialect format``
     """
     return _processor(ctx).run_query(
@@ -121,12 +122,17 @@ def get_symbol_context(qualified_name: str, ctx: Context) -> str:
 
 
 @mcp.tool()
-def get_symbol_references(qualified_name: str, ctx: Context) -> str:
+def get_symbol_references(
+    qualified_name: str, ctx: Context, include_tests: bool = False
+) -> str:
     """
     Return reference sites for a symbol (calls, accesses, type annotations).
+    Excludes test files by default; set ``include_tests`` to include them.
     """
     name = qualified_name.strip()
-    return _processor(ctx).run_query(lambda db: run_symbol_references(db, name))
+    return _processor(ctx).run_query(
+        lambda db: run_symbol_references(db, name, include_tests=include_tests)
+    )
 
 
 @mcp.tool()
