@@ -9,7 +9,6 @@ CodeParse is a codebase indexer that gives agents fast, accurate, and compact co
 1. Put the `codeparse` binary on your PATH (release asset or `make compile` → `dist/codeparse`).
 2. `codeparse mcp install`
 3. `codeparse create-skill cursor` (all projects) or `codeparse create-skill claude` (current project)
-4. Reload the client (or refresh MCP).
 
 ## Benchmark Evaluation (in-progress)
 
