@@ -35,8 +35,8 @@ The information that is provided to you will determine the tool you should use.
 ### ``grep``
  - Use when the clue is specific text in file contents.
  - DO NOT grep for symbol names; use ``search_symbols``.
- - DO NOT grep for import statements; use ``find_importers``.
- - DO NOT grep for reference sites of a known symbol; use ``get_symbol_references``.
+ - DO NOT grep to find which files depend on a module; use ``find_importers``.
+ - DO NOT grep for reference sites of a symbol; use ``get_symbol_references``.
 
 ### ``search_symbols``
  - Use when the clue is part of a symbol name, signature, or docstring.
