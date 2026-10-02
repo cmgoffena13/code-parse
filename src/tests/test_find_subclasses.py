@@ -16,14 +16,7 @@ def indexed_hierarchy(tmp_path: Path) -> Path:
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
     (pkg / "base.py").write_text(
-        "class Parent:\n"
-        "    pass\n"
-        "\n"
-        "class Sibling(Parent):\n"
-        "    pass\n"
-        "\n"
-        "class Alone:\n"
-        "    pass\n",
+        "class Parent:\n    pass\n\nclass Sibling(Parent):\n    pass\n\nclass Alone:\n    pass\n",
         encoding="utf-8",
     )
     (pkg / "child.py").write_text(

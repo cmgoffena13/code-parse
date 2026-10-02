@@ -210,9 +210,7 @@ def test_resolve_cli_path_uses_executable_when_frozen(
     assert resolve_cli_path() == binary.resolve()
 
 
-def test_cursor_and_claude_config_paths(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def test_cursor_and_claude_config_paths(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     home = tmp_path / "home"
     monkeypatch.setattr(Path, "home", staticmethod(lambda: home))
 

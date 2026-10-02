@@ -53,13 +53,9 @@ class CodeProcessor:
         self.directories_snapshot = self.db.get_directories_snapshot()
         self.files_snapshot = self.db.get_files_snapshot()
 
-    def _process_directories(
-        self, directory_names: list[str], directory_path: Path
-    ) -> None:
+    def _process_directories(self, directory_names: list[str], directory_path: Path) -> None:
         for directory_name in directory_names:
-            directory_relative_path = (directory_path / directory_name).relative_to(
-                self.root
-            )
+            directory_relative_path = (directory_path / directory_name).relative_to(self.root)
             if directory_relative_path in self.directories_snapshot:
                 self.directories_snapshot[directory_relative_path]["seen"] = True
                 continue
@@ -96,10 +92,7 @@ class CodeProcessor:
         file_last_modified = file_path.lstat().st_mtime
         file_extension = file_relative_path.suffix
         dir_path = file_path.parent.relative_to(self.root)
-        if str(dir_path) == ".":
-            directory_id = None
-        else:
-            directory_id = self.directories_snapshot[dir_path]["id"]
+        directory_id = None if str(dir_path) == "." else self.directories_snapshot[dir_path]["id"]
 
         existed = file_relative_path in self.files_snapshot
         if existed:
@@ -147,9 +140,7 @@ class CodeProcessor:
         self.files_snapshot[file_relative_path] = snap
 
         # NOTE: Two Gateway Checks for parsing: 1. Time 2. Content Hash.
-        if full or (
-            file_last_modified > self.last_incremental and file_hash != prior_hash
-        ):
+        if full or (file_last_modified > self.last_incremental and file_hash != prior_hash):
             if file_extension not in FILE_EXTENSION_MAPPING:
                 self.files_skipped += 1
                 return
@@ -158,9 +149,7 @@ class CodeProcessor:
                 FILE_EXTENSION_MAPPING[file_extension], self.assigner, self.db
             )
             module_qn = (
-                self._normalize_path(file_relative_path, language=lang)
-                if lang == "python"
-                else ""
+                self._normalize_path(file_relative_path, language=lang) if lang == "python" else ""
             )
             is_package = lang == "python" and file_name == "__init__.py"
             symbols, imports, references = parser.parse(
@@ -175,9 +164,7 @@ class CodeProcessor:
             self.files_indexed += 1
             self._insert_batch()
 
-    def _process_files(
-        self, file_names: list[str], directory_path: Path, full: bool
-    ) -> None:
+    def _process_files(self, file_names: list[str], directory_path: Path, full: bool) -> None:
         for file_name in file_names:
             self._process_file(file_name, directory_path, full)
 
@@ -245,9 +232,7 @@ class CodeProcessor:
         self.db.delete_files(self.files_snapshot)
         self.db.delete_directories(self.directories_snapshot)
         self.directories_snapshot = {
-            path: meta
-            for path, meta in self.directories_snapshot.items()
-            if meta["seen"]
+            path: meta for path, meta in self.directories_snapshot.items() if meta["seen"]
         }
         self.files_snapshot = {
             path: meta for path, meta in self.files_snapshot.items() if meta["seen"]

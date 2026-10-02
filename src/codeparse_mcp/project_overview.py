@@ -33,9 +33,7 @@ WHERE is_test = 0
 ORDER BY path
 """
 
-_MAIN_GUARD = re.compile(
-    r"""(?m)^[ \t]*if[ \t]+__name__[ \t]*==[ \t]*(['"])__main__\1[ \t]*:"""
-)
+_MAIN_GUARD = re.compile(r"""(?m)^[ \t]*if[ \t]+__name__[ \t]*==[ \t]*(['"])__main__\1[ \t]*:""")
 
 
 def _script_targets(root: Path) -> tuple[list[tuple[str, str]], str | None]:
@@ -116,9 +114,7 @@ def get_project_overview(db: CodeDB) -> str:
 
     Counts use files that sit directly in each directory. Test files are skipped.
     """
-    directories = list(
-        db.connection.execute(_DIRECTORIES_SQL, (_TOP_DIRECTORIES,)).fetchall()
-    )
+    directories = list(db.connection.execute(_DIRECTORIES_SQL, (_TOP_DIRECTORIES,)).fetchall())
     entry_points = _entry_point_lines(db)
 
     lines = [

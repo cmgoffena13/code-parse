@@ -30,9 +30,7 @@ def test_search_symbols_excludes_is_test_by_default(
         assert "Legend: # = Rank, L = Line" in out
         assert "pkg/prod.py" in out
         assert any(
-            line.startswith("  • #")
-            and " L" in line
-            and "pkg.prod.format_model" in line
+            line.startswith("  • #") and " L" in line and "pkg.prod.format_model" in line
             for line in out.splitlines()
         )
         assert "Sig:" not in out
@@ -41,9 +39,7 @@ def test_search_symbols_excludes_is_test_by_default(
         db.close()
 
 
-def test_search_symbols_include_tests(
-    tmp_path: Path, python_fixtures_dir: Path
-) -> None:
+def test_search_symbols_include_tests(tmp_path: Path, python_fixtures_dir: Path) -> None:
     root = _index(tmp_path, python_fixtures_dir)
     db = CodeDB(root)
     try:
@@ -54,9 +50,7 @@ def test_search_symbols_include_tests(
         db.close()
 
 
-def test_search_symbols_groups_by_file_with_rank(
-    tmp_path: Path, python_fixtures_dir: Path
-) -> None:
+def test_search_symbols_groups_by_file_with_rank(tmp_path: Path, python_fixtures_dir: Path) -> None:
     root = _index(tmp_path, python_fixtures_dir)
     db = CodeDB(root)
     try:

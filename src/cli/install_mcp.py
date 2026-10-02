@@ -36,13 +36,7 @@ def claude_desktop_config_path() -> Path:
     if sys.platform == "win32":
         appdata = os.environ.get("APPDATA")
         if not appdata:
-            return (
-                Path.home()
-                / "AppData"
-                / "Roaming"
-                / "Claude"
-                / "claude_desktop_config.json"
-            )
+            return Path.home() / "AppData" / "Roaming" / "Claude" / "claude_desktop_config.json"
         return Path(appdata) / "Claude" / "claude_desktop_config.json"
     return Path.home() / ".config" / "Claude" / "claude_desktop_config.json"
 

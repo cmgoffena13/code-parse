@@ -12,13 +12,8 @@ def test_imports_spot_checks_from_fixture_file(python_parser, fixture_bytes):
     assert len(imports) == 3
     assert_imports_invariants(imports)
 
-    assert any(
-        i["import_path"] == "json" and i["imported_symbol"] == "" for i in imports
-    )
-    assert any(
-        i["import_path"] == "pathlib" and i["imported_symbol"] == "Path"
-        for i in imports
-    )
+    assert any(i["import_path"] == "json" and i["imported_symbol"] == "" for i in imports)
+    assert any(i["import_path"] == "pathlib" and i["imported_symbol"] == "Path" for i in imports)
     assert any(i["import_type"] == "relative" for i in imports)
 
 
@@ -33,16 +28,12 @@ def test_imports_aliases(python_parser, fixture_bytes):
 
     # import os as operating_system -> imported_symbol empty, alias set
     assert any(
-        i["import_path"] == "os"
-        and i["imported_symbol"] == ""
-        and i["alias"] == "operating_system"
+        i["import_path"] == "os" and i["imported_symbol"] == "" and i["alias"] == "operating_system"
         for i in imports
     )
     # from pathlib import Path as P
     assert any(
-        i["import_path"] == "pathlib"
-        and i["imported_symbol"] == "Path"
-        and i["alias"] == "P"
+        i["import_path"] == "pathlib" and i["imported_symbol"] == "Path" and i["alias"] == "P"
         for i in imports
     )
     assert any(
@@ -63,16 +54,10 @@ def test_imports_multiple_in_one_statement(python_parser, fixture_bytes):
     assert_imports_invariants(imports)
 
     assert any(i["import_path"] == "os" and i["imported_symbol"] == "" for i in imports)
+    assert any(i["import_path"] == "sys" and i["imported_symbol"] == "" for i in imports)
+    assert any(i["import_path"] == "pathlib" and i["imported_symbol"] == "Path" for i in imports)
     assert any(
-        i["import_path"] == "sys" and i["imported_symbol"] == "" for i in imports
-    )
-    assert any(
-        i["import_path"] == "pathlib" and i["imported_symbol"] == "Path"
-        for i in imports
-    )
-    assert any(
-        i["import_path"] == "pathlib" and i["imported_symbol"] == "PurePath"
-        for i in imports
+        i["import_path"] == "pathlib" and i["imported_symbol"] == "PurePath" for i in imports
     )
 
 
@@ -92,15 +77,9 @@ def test_references_dotted_calls_and_chained_attributes(python_parser, fixture_b
         r["ref_kind"] == "call" and r["ref_symbol_name"] == "pkgutil.walk_packages"
         for r in references
     )
+    assert any(r["ref_kind"] == "access" and r["ref_symbol_name"] == "obj.a.b" for r in references)
     assert any(
-        r["ref_kind"] == "access" and r["ref_symbol_name"] == "obj.a.b"
-        for r in references
-    )
-    assert any(
-        r["ref_kind"] == "access" and r["ref_symbol_name"] == "obj.m().n"
-        for r in references
+        r["ref_kind"] == "access" and r["ref_symbol_name"] == "obj.m().n" for r in references
     )
     # Current behavior: obj.m() produces its own call reference (separate from access on obj.m().n)
-    assert any(
-        r["ref_kind"] == "call" and r["ref_symbol_name"] == "obj.m" for r in references
-    )
+    assert any(r["ref_kind"] == "call" and r["ref_symbol_name"] == "obj.m" for r in references)

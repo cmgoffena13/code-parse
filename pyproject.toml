@@ -38,8 +38,12 @@ fail_under = 90
 [tool.ruff]
 target-version = "py312"
 extend-exclude = ["src/tests/files_to_parse/"]
+line-length = 100
+force-exclude = true
 lint.extend-select = [
     "A",     # Builtins
+    "AIR",   # Optional: Airflow
+    "FAST",  # Optional: FastApi
     "DTZ",   # Datetime
     "SIM",   # Simplify
     "I",     # Isort Imports
@@ -51,13 +55,15 @@ lint.extend-select = [
     "PTH",   # Pathlib
     "ARG",   # Unused Args
     "C4",    # Force Current List Comprehensions
-    "RET"    # Return Checks
+    "RET",   # Return Checks
+    "E501",  # Line Too Long
+    "ANN401" # No 'Any'
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "test_*.py" = ["S101", "S607"]
 "_assertions.py" = ["S101"]
-"eval/bench.py" = ["S603", "S607", "EXE001"]
+"eval/bench.py" = ["S603", "S607", "EXE001", "ANN401"]
 
 [tool.ty.src]
 exclude = ["src/tests/files_to_parse/"]

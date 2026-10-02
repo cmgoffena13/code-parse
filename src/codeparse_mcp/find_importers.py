@@ -34,9 +34,7 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
 
     rows = list(
         db.connection.execute(
-            _IMPORTERS_SQL.format(
-                test_filter="" if include_tests else "  AND f.is_test = 0"
-            ),
+            _IMPORTERS_SQL.format(test_filter="" if include_tests else "  AND f.is_test = 0"),
             (path,),
         )
     )
@@ -51,7 +49,5 @@ def find_importers(db: CodeDB, file_path: str, *, include_tests: bool = False) -
         *(f"  • {p}" for p in paths[:_MAX_IMPORTER_FILES]),
     ]
     if total > _MAX_IMPORTER_FILES:
-        lines_out.extend(
-            ["", f"...[{total - _MAX_IMPORTER_FILES} more importer files truncated]"]
-        )
+        lines_out.extend(["", f"...[{total - _MAX_IMPORTER_FILES} more importer files truncated]"])
     return "\n".join(lines_out).rstrip() + "\n"

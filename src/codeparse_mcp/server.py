@@ -114,21 +114,24 @@ def search_symbols(
 @mcp.tool()
 def get_symbol_context(qualified_name: str, ctx: Context) -> str:
     """
-    Return the symbol code definition and aggregated count of reference sites (calls, accesses, type annotations).
-    References do not follow multi-hop attribute access (obj.field.method), untyped locals, or cross-file field hops.
-    Use ``get_symbol_references`` for detailed call, access, and type-annotation sites.
+    Return the symbol code definition and aggregated count of reference sites
+    (calls, accesses, type annotations).
+    References do not follow multi-hop attribute access (obj.field.method),
+    untyped locals, or cross-file field hops.
+    Use ``get_symbol_references`` for detailed call, access, and type-annotation
+    sites.
     """
     name = qualified_name.strip()
     return _processor(ctx).run_query(lambda db: run_symbol_context(db, name))
 
 
 @mcp.tool()
-def get_symbol_references(
-    qualified_name: str, ctx: Context, include_tests: bool = False
-) -> str:
+def get_symbol_references(qualified_name: str, ctx: Context, include_tests: bool = False) -> str:
     """
-    Return reference sites for a symbol (calls, accesses, type annotations) and which symbols they happen in.
-    References do not follow multi-hop attribute access (obj.field.method), untyped locals, or cross-file field hops.
+    Return reference sites for a symbol (calls, accesses, type annotations) and
+    which symbols they happen in.
+    References do not follow multi-hop attribute access (obj.field.method),
+    untyped locals, or cross-file field hops.
     Excludes test files by default; set ``include_tests`` to include them.
     """
     name = qualified_name.strip()
@@ -138,9 +141,7 @@ def get_symbol_references(
 
 
 @mcp.tool()
-def find_subclasses(
-    qualified_name: str, ctx: Context, include_tests: bool = False
-) -> str:
+def find_subclasses(qualified_name: str, ctx: Context, include_tests: bool = False) -> str:
     """
     Return classes that directly inherit from a given class, with file and line.
     Excludes test files by default; set ``include_tests`` to include them.

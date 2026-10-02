@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Token-usage benchmark: codeparse MCP (+ read/grep/glob/ls) vs read/grep on a pinned SQLMesh checkout.
+"""Token-usage benchmark: codeparse MCP (+ read/grep/glob/ls) vs read/grep on a
+pinned SQLMesh checkout.
 
 Supports --provider cursor (Cursor SDK) or claude (Claude Agent SDK).
 """
@@ -81,9 +82,7 @@ def ensure_sqlmesh(sha: str, repo_url: str) -> Path:
         text=True,
     ).stdout.strip()
     if current != sha:
-        subprocess.run(
-            ["git", "fetch", "--depth", "1", "origin", sha], cwd=SQLMESH_DIR, check=True
-        )
+        subprocess.run(["git", "fetch", "--depth", "1", "origin", sha], cwd=SQLMESH_DIR, check=True)
         subprocess.run(["git", "checkout", "--force", sha], cwd=SQLMESH_DIR, check=True)
     return SQLMESH_DIR.resolve()
 
@@ -176,8 +175,7 @@ def build_prompt(task: dict[str, Any], *, arm: str) -> str:
             0,
             "You have read/grep/glob/ls plus the codeparse MCP server. "
             "Prefer ``get_file_overview`` / ``get_symbol_context`` for file and "
-            "symbol contents when those tools fit (follow this skill).\n\n"
-            + SKILL_INSTRUCTIONS,
+            "symbol contents when those tools fit (follow this skill).\n\n" + SKILL_INSTRUCTIONS,
         )
     else:
         parts.insert(
@@ -220,9 +218,7 @@ def _sorted_tool_counts(counts: Counter[str]) -> dict[str, int]:
 
 
 def _counts_from_timeline(timeline: list[dict[str, Any]]) -> dict[str, int]:
-    return _sorted_tool_counts(
-        Counter(str(e.get("tool") or "unknown") for e in timeline)
-    )
+    return _sorted_tool_counts(Counter(str(e.get("tool") or "unknown") for e in timeline))
 
 
 def _compact_tool_args(args: Any, *, max_val: int = 120) -> dict[str, Any] | None:
@@ -366,9 +362,7 @@ def run_cursor_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[
-    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
-]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]]:
     from cursor_sdk import Agent, AgentOptions, LocalAgentOptions
     from cursor_sdk.types import StdioMcpServerConfig
 
@@ -404,9 +398,7 @@ def run_cursor_agent(
         text = run.text() if status == "finished" else ""
         if not text and hasattr(result, "result") and result.result:
             text = str(result.result)
-        usage = _cursor_usage_dict(
-            result.usage if result.usage is not None else run.usage
-        )
+        usage = _cursor_usage_dict(result.usage if result.usage is not None else run.usage)
         run_id = getattr(result, "id", None) or getattr(run, "id", None)
         timeline = _cursor_tool_timeline(run)
         tools_used = _counts_from_timeline(timeline)
@@ -426,9 +418,7 @@ async def _run_claude_query(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[
-    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
-]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]]:
     from claude_agent_sdk import (
         AssistantMessage,
         ClaudeAgentOptions,
@@ -492,15 +482,11 @@ async def _run_claude_query(
                     )
         elif isinstance(message, ResultMessage):
             session_id = message.session_id
-            usage = _claude_usage_dict(
-                message.usage if isinstance(message.usage, dict) else None
-            )
+            usage = _claude_usage_dict(message.usage if isinstance(message.usage, dict) else None)
             num_turns = message.num_turns
             if message.result:
                 result_text = message.result
-            if message.is_error or (
-                message.subtype and message.subtype not in ("success",)
-            ):
+            if message.is_error or (message.subtype and message.subtype not in ("success",)):
                 status = message.subtype or "error"
 
     if usage is not None and num_turns is not None:
@@ -523,12 +509,8 @@ def run_claude_agent(
     prompt: str,
     model: str,
     sqlmesh: Path,
-) -> tuple[
-    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
-]:
-    return asyncio.run(
-        _run_claude_query(arm=arm, prompt=prompt, model=model, sqlmesh=sqlmesh)
-    )
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]]:
+    return asyncio.run(_run_claude_query(arm=arm, prompt=prompt, model=model, sqlmesh=sqlmesh))
 
 
 def run_agent(
@@ -539,9 +521,7 @@ def run_agent(
     model: str,
     api_key: str,
     sqlmesh: Path,
-) -> tuple[
-    str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]
-]:
+) -> tuple[str, str | None, dict[str, Any] | None, str, dict[str, int], list[dict[str, Any]]]:
     if provider == "cursor":
         return run_cursor_agent(
             arm=arm, prompt=prompt, model=model, api_key=api_key, sqlmesh=sqlmesh
@@ -601,9 +581,7 @@ def _overall_block(
 ) -> list[str]:
     base_tokens = agg(pass_tokens["baseline"])
     treat_tokens = agg(pass_tokens["codeparse"])
-    ratio_tokens = (
-        (treat_tokens / base_tokens) if base_tokens and treat_tokens else None
-    )
+    ratio_tokens = (treat_tokens / base_tokens) if base_tokens and treat_tokens else None
     base_tools = agg(pass_tools["baseline"])
     treat_tools = agg(pass_tools["codeparse"])
     ratio_tools = (treat_tools / base_tools) if base_tools and treat_tools else None
@@ -611,7 +589,10 @@ def _overall_block(
         f"Overall {label} (of per-task passing medians)",
         f"  baseline : {_fmt_tokens(base_tokens)} tokens  ({_fmt_tools(base_tools)} tool calls)",
         f"  codeparse: {_fmt_tokens(treat_tokens)} tokens  ({_fmt_tools(treat_tools)} tool calls)",
-        f"  ratio    : {_fmt_ratio(ratio_tokens)} tokens  {_fmt_ratio(ratio_tools)} tool calls  (codeparse / baseline)",
+        (
+            f"  ratio    : {_fmt_ratio(ratio_tokens)} tokens  "
+            f"{_fmt_ratio(ratio_tools)} tool calls  (codeparse / baseline)"
+        ),
     ]
 
 
@@ -710,9 +691,7 @@ def summarize(rows: list[dict[str, Any]], *, elapsed_s: float | None = None) -> 
         lines.append("  ".join(row[c].ljust(widths[c]) for c in cols))
 
     lines.append("")
-    lines.extend(
-        _overall_block("median", overall_pass, overall_tools, agg=median_or_none)
-    )
+    lines.extend(_overall_block("median", overall_pass, overall_tools, agg=median_or_none))
     lines.extend(_overall_block("mean", overall_pass, overall_tools, agg=mean_or_none))
     if elapsed_s is not None:
         lines.append(f"  elapsed  : {_fmt_duration(elapsed_s)}")
@@ -743,9 +722,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="cursor",
         help="Agent runtime (default: cursor)",
     )
-    parser.add_argument(
-        "--smoke", action="store_true", help="All tasks, one repeat each"
-    )
+    parser.add_argument("--smoke", action="store_true", help="All tasks, one repeat each")
     parser.add_argument(
         "-v",
         "--verbose",
@@ -753,15 +730,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Print per-step tool call timelines after each run",
     )
     parser.add_argument("--tasks", nargs="+", help="Task ids to run")
-    parser.add_argument(
-        "--repeats", type=int, default=10, help="Repeats per arm (default 10)"
-    )
+    parser.add_argument("--repeats", type=int, default=10, help="Repeats per arm (default 10)")
     parser.add_argument(
         "--model",
         default=None,
-        help=(
-            "Model id (default: grok-4.7 for cursor, claude-opus-5-5-medium for claude)"
-        ),
+        help=("Model id (default: grok-4.7 for cursor, claude-opus-5-5-medium for claude)"),
     )
     return parser.parse_args(argv)
 

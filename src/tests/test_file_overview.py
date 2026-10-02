@@ -28,9 +28,7 @@ def _index(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     (pkg / "other.py").write_text("def helper() -> None:\n    pass\n", encoding="utf-8")
-    (pkg / "late.py").write_text(
-        "def late_thing() -> int:\n    return 1\n", encoding="utf-8"
-    )
+    (pkg / "late.py").write_text("def late_thing() -> int:\n    return 1\n", encoding="utf-8")
     db = CodeDB(tmp_path)
     CodeProcessor(db, tmp_path).process()
     db.close()

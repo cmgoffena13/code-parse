@@ -60,9 +60,7 @@ class PythonParser(ParserBase):
         tree = self.parser.parse(file_bytes)
         root_node = tree.root_node
         self.symbols_snapshot = self.db.get_symbols_snapshot(file_id)
-        self.symbols_references_snapshot = self.db.get_symbol_references_snapshot(
-            file_id
-        )
+        self.symbols_references_snapshot = self.db.get_symbol_references_snapshot(file_id)
         self.imports_snapshot = self.db.get_imports_snapshot(file_id)
         self._walk(root_node, file_id, file_bytes)
 
@@ -155,11 +153,7 @@ class PythonParser(ParserBase):
         if node.type == "class_definition":
             return "class"
         if node.type in ("function_definition", "async_function_definition"):
-            return (
-                "method"
-                if (self.stack and self.stack[-1].kind == "class")
-                else "function"
-            )
+            return "method" if (self.stack and self.stack[-1].kind == "class") else "function"
         return "variable"
 
     def _snapshot_branch_is_test(self, kind: str, name: str) -> bool:
@@ -456,16 +450,12 @@ class PythonParser(ParserBase):
             "augmented_assignment",
         ):
             # Variable symbols (module/class/function scope)
-            for symbol_data in self._extract_variable_symbols(
-                node, file_id, file_bytes
-            ):
+            for symbol_data in self._extract_variable_symbols(node, file_id, file_bytes):
                 self.symbols.append(symbol_data)
 
         # 3. Recurse (import-first in statement suites so bindings exist before siblings)
         children = (
-            self._children_import_first(node)
-            if node.type in ("module", "block")
-            else node.children
+            self._children_import_first(node) if node.type in ("module", "block") else node.children
         )
         for child in children:
             self._walk(child, file_id, file_bytes)
@@ -487,7 +477,8 @@ class PythonParser(ParserBase):
         return text in ("Optional", "typing.Optional", "t.Optional")
 
     def _annotation_type_name(self, type_node: Node | None) -> str | None:
-        """Bare identifier/attribute, or inner type of Optional[...] / typing.Optional / t.Optional."""
+        """Bare identifier/attribute, or inner type of Optional[...] /
+        typing.Optional / t.Optional."""
         if type_node is None:
             return None
         node = type_node
@@ -555,9 +546,7 @@ class PythonParser(ParserBase):
                 out[param_name] = simple
         return out
 
-    def _extract_variable_symbols(
-        self, node: Node, file_id: int, file_bytes: bytes
-    ) -> list[dict]:
+    def _extract_variable_symbols(self, node: Node, file_id: int, file_bytes: bytes) -> list[dict]:
         symbols: list[dict] = []
 
         # Only capture module/class plus __init__ assignments.
@@ -671,9 +660,7 @@ class PythonParser(ParserBase):
                 if type_node is not None:
                     self._extract_reference(type_node, "type_annotation", file_id)
 
-    def _extract_symbol(
-        self, node: Node, file_id: int, file_bytes: bytes
-    ) -> dict | None:
+    def _extract_symbol(self, node: Node, file_id: int, file_bytes: bytes) -> dict | None:
         """Extract symbol definition (Class, Function, Variable)."""
         name_node = node.child_by_field_name("name")
         if not name_node:
@@ -687,9 +674,7 @@ class PythonParser(ParserBase):
             if node.parent is not None and node.parent.type == "decorated_definition"
             else None
         )
-        line_start = (
-            outer.start_point.row + 1 if outer is not None else node.start_point.row + 1
-        )
+        line_start = outer.start_point.row + 1 if outer is not None else node.start_point.row + 1
         line_end = node.end_point.row + 1
 
         kind = self._kind_for_definition(node)
@@ -872,10 +857,7 @@ class PythonParser(ParserBase):
                     )
                 elif child.type == "dotted_name":
                     # Skip the module part (absolute dotted_name or relative_import's dotted_name)
-                    if (
-                        relative_node is not None
-                        and child.start_byte < relative_node.end_byte
-                    ):
+                    if relative_node is not None and child.start_byte < relative_node.end_byte:
                         continue
                     if (
                         relative_node is None
@@ -900,9 +882,7 @@ class PythonParser(ParserBase):
                     import_scope,
                     signature,
                 )
-                self._register_import_ref_binding(
-                    import_path, imported_symbol, alias, import_type
-                )
+                self._register_import_ref_binding(import_path, imported_symbol, alias, import_type)
 
         elif node.type == "import_statement":
             import_type = "absolute"
@@ -941,9 +921,7 @@ class PythonParser(ParserBase):
                     import_scope,
                     signature,
                 )
-                self._register_import_ref_binding(
-                    import_path, imported_symbol, alias, import_type
-                )
+                self._register_import_ref_binding(import_path, imported_symbol, alias, import_type)
 
     def _extract_reference(self, node: Node, ref_kind: str, file_id: int) -> None:
         """Extract Reference (Call, Access, Type)."""

@@ -32,15 +32,11 @@ def _db_counts(tmp: Path) -> dict:
         return {
             "directories": [(r["id"], r["path"]) for r in dirs],
             "files": conn.execute("SELECT COUNT(*) AS c FROM files").fetchone()["c"],
-            "symbols": conn.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()[
-                "c"
-            ],
+            "symbols": conn.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()["c"],
             "symbol_references": conn.execute(
                 "SELECT COUNT(*) AS c FROM symbol_references"
             ).fetchone()["c"],
-            "imports": conn.execute("SELECT COUNT(*) AS c FROM imports").fetchone()[
-                "c"
-            ],
+            "imports": conn.execute("SELECT COUNT(*) AS c FROM imports").fetchone()["c"],
             "symbol_count_sum": conn.execute(
                 "SELECT COALESCE(SUM(symbol_count), 0) AS s FROM files"
             ).fetchone()["s"],
@@ -134,9 +130,7 @@ def test_same_name_symbols_in_two_files_both_survive(tmp_path: Path) -> None:
     ).fetchall()
     qns = [r["qualified_name"] for r in rows]
     assert qns == ["a.main", "b.main"]
-    assert (
-        db.connection.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()["c"] == 2
-    )
+    assert db.connection.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()["c"] == 2
 
 
 def test_cross_file_import_call_joins_after_resolve(tmp_path: Path) -> None:
@@ -199,9 +193,9 @@ def test_concurrent_run_query_does_not_raise(tmp_path: Path) -> None:
 
     def worker() -> int:
         return processor.run_query(
-            lambda conn: conn.connection.execute(
-                "SELECT COUNT(*) AS c FROM symbols"
-            ).fetchone()["c"]
+            lambda conn: conn.connection.execute("SELECT COUNT(*) AS c FROM symbols").fetchone()[
+                "c"
+            ]
         )
 
     with ThreadPoolExecutor(max_workers=8) as pool:

@@ -20,7 +20,5 @@ def file_label(name: str, line_count: int, symbol_count: int) -> str:
     label = name or "(unknown path)"
     if line_count <= 0:
         return label
-    stats = (
-        f"({line_count}L)" if symbol_count <= 0 else f"({line_count}L, {symbol_count}S)"
-    )
+    stats = f"({line_count}L)" if symbol_count <= 0 else f"({line_count}L, {symbol_count}S)"
     return f"{label} {stats}"

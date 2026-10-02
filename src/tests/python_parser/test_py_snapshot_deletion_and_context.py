@@ -68,9 +68,7 @@ def f(
     return a, b
 """
 
-    (_sym1, _imp1, ref1), (_sym2, _imp2, ref2) = _parse_with_shared_db(
-        100, first, first
-    )
+    (_sym1, _imp1, ref1), (_sym2, _imp2, ref2) = _parse_with_shared_db(100, first, first)
 
     assert len(ref1) == len(ref2)
     keys1 = {

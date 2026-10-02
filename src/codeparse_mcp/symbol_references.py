@@ -44,9 +44,7 @@ def _enclosing_qn(spans: list[tuple[str, int, int]], source_line: int) -> str | 
     return best[0] if best else None
 
 
-def _load_file_spans(
-    db: CodeDB, file_ids: set[int]
-) -> dict[int, list[tuple[str, int, int]]]:
+def _load_file_spans(db: CodeDB, file_ids: set[int]) -> dict[int, list[tuple[str, int, int]]]:
     by_file: dict[int, list[tuple[str, int, int]]] = {}
     for file_id in file_ids:
         by_file[file_id] = [
@@ -65,9 +63,7 @@ def _section_lines(
     by_file: OrderedDict[str, list[tuple[int, int]]] = OrderedDict()
     for r in rows:
         path = r["source_path"]
-        by_file.setdefault(path, []).append(
-            (int(r["source_file_id"]), int(r["source_line"]))
-        )
+        by_file.setdefault(path, []).append((int(r["source_file_id"]), int(r["source_line"])))
 
     shown = len(rows)
     count_label = f"{shown} of {total}" if shown < total else str(total)
@@ -89,9 +85,7 @@ def _section_lines(
     return lines_out
 
 
-def get_symbol_references(
-    db: CodeDB, qualified_name: str, *, include_tests: bool = False
-) -> str:
+def get_symbol_references(db: CodeDB, qualified_name: str, *, include_tests: bool = False) -> str:
     """
     List reference sites for ``qualified_name``, grouped by ``ref_kind`` then file.
 
@@ -105,9 +99,7 @@ def get_symbol_references(
 
     rows = list(
         db.connection.execute(
-            _REFERENCES_SQL.format(
-                test_filter="" if include_tests else "    AND f.is_test = 0"
-            ),
+            _REFERENCES_SQL.format(test_filter="" if include_tests else "    AND f.is_test = 0"),
             (key,),
         )
     )
@@ -130,9 +122,7 @@ def get_symbol_references(
         items = by_kind.get(kind, [])
         if not items:
             continue
-        lines.extend(
-            _section_lines(heading, len(items), items[:_MAX_PER_KIND], spans_by_file)
-        )
+        lines.extend(_section_lines(heading, len(items), items[:_MAX_PER_KIND], spans_by_file))
 
     for kind in sorted(k for k in by_kind if k not in covered):
         items = by_kind[kind]
@@ -140,9 +130,7 @@ def get_symbol_references(
             continue
         title = kind.replace("_", " ").title()
         lines.extend(
-            _section_lines(
-                f"## {title}", len(items), items[:_MAX_PER_KIND], spans_by_file
-            )
+            _section_lines(f"## {title}", len(items), items[:_MAX_PER_KIND], spans_by_file)
         )
 
     return "\n".join(lines).rstrip() + "\n"

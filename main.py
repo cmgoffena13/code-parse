@@ -35,9 +35,7 @@ def _print_section(title: str, body: str) -> None:
 
 def main() -> None:
     if not SQLMESH_ROOT.is_dir():
-        raise SystemExit(
-            f"Missing {SQLMESH_ROOT}; run an eval smoke first to clone sqlmesh."
-        )
+        raise SystemExit(f"Missing {SQLMESH_ROOT}; run an eval smoke first to clone sqlmesh.")
 
     db = CodeDB(SQLMESH_ROOT)
     processor = CodeProcessor(db, SQLMESH_ROOT)
@@ -45,9 +43,7 @@ def main() -> None:
 
     _print_section("DIRECTORY TREE", get_directory_tree(db, "sqlmesh/core/"))
     _print_section("FILE OVERVIEW", get_file_overview(db, "sqlmesh/core/dialect.py"))
-    _print_section(
-        "SEARCH SYMBOLS", search_symbols(db, "format_model", include_tests=True)
-    )
+    _print_section("SEARCH SYMBOLS", search_symbols(db, "format_model", include_tests=True))
     _print_section(
         "SYMBOL CONTEXT",
         get_symbol_context(db, "sqlmesh.RuntimeEnv.is_terminal"),

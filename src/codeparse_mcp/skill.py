@@ -7,10 +7,13 @@ SKILL_INSTRUCTIONS = """\
 ---
 name: codeparse
 description: Use the codeparse MCP Server effectively.
-allowed-tools: get_directory_tree get_file_overview search_symbols get_symbol_context get_symbol_references find_importers find_subclasses get_project_overview
+allowed-tools: get_directory_tree get_file_overview search_symbols \
+get_symbol_context get_symbol_references find_importers find_subclasses \
+get_project_overview
 ---
 
-IMPORTANT: ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of ``read`` to get file / symbol information.
+IMPORTANT: ALWAYS USE ``get_symbol_context`` / ``get_file_overview`` instead of \
+``read`` to get file / symbol information.
 
 The information that is provided to you will determine the tool you should use.
 

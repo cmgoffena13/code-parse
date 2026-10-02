@@ -73,7 +73,8 @@ class CodeDB:
 
     def get_files_snapshot(self) -> dict[Path, dict[str, Any]]:
         cursor = self.connection.execute(
-            "SELECT id, directory_id, path, content_hash, line_count, symbol_count, is_test FROM files"
+            "SELECT id, directory_id, path, content_hash, line_count, "
+            "symbol_count, is_test FROM files"
         )
         return {
             Path(row["path"]): {
@@ -92,9 +93,7 @@ class CodeDB:
         file_ids = [file["id"] for file in files.values() if not file["seen"]]
         self.delete_ids("files", file_ids)
 
-    def get_symbols_snapshot(
-        self, file_id: int
-    ) -> dict[tuple[str, str], dict[str, Any]]:
+    def get_symbols_snapshot(self, file_id: int) -> dict[tuple[str, str], dict[str, Any]]:
         # NOTE: combine symbol_bases and symbols into a single query
         query = """
             SELECT
@@ -136,12 +135,8 @@ class CodeDB:
             for key, entry in by_key.items()
         }
 
-    def delete_symbols(
-        self, symbols_snapshot: dict[tuple[str, str], dict[str, Any]]
-    ) -> None:
-        symbol_ids = [
-            symbol["id"] for symbol in symbols_snapshot.values() if not symbol["seen"]
-        ]
+    def delete_symbols(self, symbols_snapshot: dict[tuple[str, str], dict[str, Any]]) -> None:
+        symbol_ids = [symbol["id"] for symbol in symbols_snapshot.values() if not symbol["seen"]]
         if not symbol_ids:
             return
         with self.connection:
@@ -196,9 +191,7 @@ class CodeDB:
         ]
         self.delete_ids("symbol_references", symbol_reference_ids)
 
-    def get_imports_snapshot(
-        self, file_id: int
-    ) -> dict[tuple[str, str], dict[str, Any]]:
+    def get_imports_snapshot(self, file_id: int) -> dict[tuple[str, str], dict[str, Any]]:
         query = """
         SELECT
         id,
@@ -218,9 +211,7 @@ class CodeDB:
             for row in cursor
         }
 
-    def delete_imports(
-        self, imports_snapshot: dict[tuple[str, str], dict[str, Any]]
-    ) -> None:
+    def delete_imports(self, imports_snapshot: dict[tuple[str, str], dict[str, Any]]) -> None:
         import_ids = [i["id"] for i in imports_snapshot.values() if not i["seen"]]
         self.delete_ids("imports", import_ids)
 
@@ -243,8 +234,11 @@ class CodeDB:
             self.connection.executemany(
                 """
                 INSERT OR REPLACE INTO files
-                (id, directory_id, name, path, normalized_path, language, content_hash, line_count, symbol_count, is_test)
-                VALUES (:id, :directory_id, :name, :path, :normalized_path, :language, :content_hash, :line_count, :symbol_count, :is_test)
+                (id, directory_id, name, path, normalized_path, language,
+                 content_hash, line_count, symbol_count, is_test)
+                VALUES (:id, :directory_id, :name, :path, :normalized_path,
+                        :language, :content_hash, :line_count, :symbol_count,
+                        :is_test)
                 """,
                 files,
             )
@@ -262,8 +256,12 @@ class CodeDB:
             self.connection.executemany(
                 """
                 INSERT OR REPLACE INTO symbols
-                (id, file_id, parent_id, name, qualified_name, kind, line_start, line_end, line_count, signature, docstring, modifiers, language, is_test)
-                VALUES (:id, :file_id, :parent_id, :name, :qualified_name, :kind, :line_start, :line_end, :line_count, :signature, :docstring, :modifiers, :language, :is_test)
+                (id, file_id, parent_id, name, qualified_name, kind, line_start,
+                 line_end, line_count, signature, docstring, modifiers, language,
+                 is_test)
+                VALUES (:id, :file_id, :parent_id, :name, :qualified_name, :kind,
+                        :line_start, :line_end, :line_count, :signature,
+                        :docstring, :modifiers, :language, :is_test)
                 """,
                 symbols,
             )
@@ -284,8 +282,7 @@ class CodeDB:
                 )
 
             fts_symbols = [
-                (s["id"], s["qualified_name"], s["docstring"], s["signature"])
-                for s in symbols
+                (s["id"], s["qualified_name"], s["docstring"], s["signature"]) for s in symbols
             ]
             self.connection.executemany(
                 """
@@ -298,8 +295,11 @@ class CodeDB:
             self.connection.executemany(
                 """
                 INSERT INTO symbol_references_staging
-                (id, ref_symbol_name, ref_symbol_qualified_name, source_file_id, source_line, source_column, ref_kind, context)
-                VALUES (:id, :ref_symbol_name, :ref_symbol_qualified_name, :source_file_id, :source_line, :source_column, :ref_kind, :context)
+                (id, ref_symbol_name, ref_symbol_qualified_name, source_file_id,
+                 source_line, source_column, ref_kind, context)
+                VALUES (:id, :ref_symbol_name, :ref_symbol_qualified_name,
+                        :source_file_id, :source_line, :source_column, :ref_kind,
+                        :context)
                 """,
                 symbol_references,
             )
@@ -307,8 +307,10 @@ class CodeDB:
             self.connection.executemany(
                 """
                 INSERT OR REPLACE INTO imports
-                (id, file_id, import_path, imported_symbol, alias, line_number, import_type, import_scope, signature)
-                VALUES (:id, :file_id, :import_path, :imported_symbol, :alias, :line_number, :import_type, :import_scope, :signature)
+                (id, file_id, import_path, imported_symbol, alias, line_number,
+                 import_type, import_scope, signature)
+                VALUES (:id, :file_id, :import_path, :imported_symbol, :alias,
+                        :line_number, :import_type, :import_scope, :signature)
                 """,
                 imports,
             )
@@ -317,7 +319,9 @@ class CodeDB:
         with self.connection:
             self.connection.execute("""
             INSERT INTO symbol_references
-            (id, ref_symbol_id, ref_symbol_file_id, ref_symbol_name, ref_symbol_qualified_name, source_file_id, source_line, source_column, ref_kind, context)
+            (id, ref_symbol_id, ref_symbol_file_id, ref_symbol_name,
+             ref_symbol_qualified_name, source_file_id, source_line,
+             source_column, ref_kind, context)
             SELECT
             s.id,
             sy.id AS ref_symbol_id,

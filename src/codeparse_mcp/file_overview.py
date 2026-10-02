@@ -72,9 +72,7 @@ def _symbol_branch_lines(
         lines.append(f"{branch_prefix}{connector}{_symbol_label(row)}")
         continuation = "   " if is_last else "│  "
         lines.extend(
-            _symbol_branch_lines(
-                children_by_parent_id, row["id"], branch_prefix + continuation
-            )
+            _symbol_branch_lines(children_by_parent_id, row["id"], branch_prefix + continuation)
         )
     return lines
 
@@ -127,9 +125,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
             if sig != "—":
                 seen_signatures.add(sig)
             import_lines.append((line_n, sig))
-        gutter = _gutter_width(
-            *(n for n, _ in import_lines), int(file_row["line_count"] or 0)
-        )
+        gutter = _gutter_width(*(n for n, _ in import_lines), int(file_row["line_count"] or 0))
         for line_n, sig in import_lines:
             if line_n > 0:
                 lines_out.append(f"L{line_n:<{gutter}}  {sig}")
@@ -155,9 +151,7 @@ def get_file_overview(db: CodeDB, file_path: str) -> str:
         for row in sym_rows:
             children_by_parent_id[effective_parent_id(row)].append(row)
         for bucket in children_by_parent_id.values():
-            bucket.sort(
-                key=lambda r: (r["line_start"], r["line_end"], r["qualified_name"])
-            )
+            bucket.sort(key=lambda r: (r["line_start"], r["line_end"], r["qualified_name"]))
 
         roots = children_by_parent_id.get(None, ())
         for root_index, row in enumerate(roots):

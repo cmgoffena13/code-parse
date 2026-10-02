@@ -6,7 +6,10 @@ def test_resolve_symbol_references_drops_unresolvable_type_annotations(tmp_db: C
     with tmp_db.connection:
         tmp_db.connection.execute(
             """
-            INSERT INTO files (id, directory_id, name, path, normalized_path, language, content_hash, line_count)
+            INSERT INTO files (
+                id, directory_id, name, path, normalized_path, language,
+                content_hash, line_count
+            )
             VALUES (1, NULL, 'file.py', 'file.py', 'file', 'python', 'x', 1)
             """
         )
@@ -16,7 +19,8 @@ def test_resolve_symbol_references_drops_unresolvable_type_annotations(tmp_db: C
         tmp_db.connection.execute(
             """
             INSERT INTO symbol_references_staging
-            (id, ref_symbol_name, ref_symbol_qualified_name, source_file_id, source_line, source_column, ref_kind, context)
+            (id, ref_symbol_name, ref_symbol_qualified_name, source_file_id,
+             source_line, source_column, ref_kind, context)
             VALUES (1, 'int', 'int', 1, 1, 0, 'type_annotation', 'int')
             """
         )

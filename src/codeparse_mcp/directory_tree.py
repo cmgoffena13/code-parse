@@ -44,9 +44,7 @@ def _lines_under_parent(children_by_parent_id, parent_key, branch_prefix):
         if is_directory:
             continuation = "    " if is_last_child else "│   "
             next_prefix = branch_prefix + continuation
-            lines.extend(
-                _lines_under_parent(children_by_parent_id, row["id"], next_prefix)
-            )
+            lines.extend(_lines_under_parent(children_by_parent_id, row["id"], next_prefix))
     return lines
 
 
@@ -85,6 +83,4 @@ def get_directory_tree(db: CodeDB, path: str | None = None) -> str:
     body_lines = _lines_under_parent(children_by_parent_id, root_key, "")
     if not body_lines:
         return root_label.rstrip("/") or "."
-    return (
-        "Legend: L = Lines, S = Symbols\n\n" + root_label + "\n" + "\n".join(body_lines)
-    )
+    return "Legend: L = Lines, S = Symbols\n\n" + root_label + "\n" + "\n".join(body_lines)

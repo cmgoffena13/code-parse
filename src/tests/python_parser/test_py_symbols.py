@@ -7,9 +7,7 @@ from src.tests.python_parser._assertions import (
 )
 
 
-def test_python_fixture_file_parses_symbols_imports_and_references(
-    python_parser, fixture_bytes
-):
+def test_python_fixture_file_parses_symbols_imports_and_references(python_parser, fixture_bytes):
     file_bytes = fixture_bytes("file.py")
     symbols, imports, references = python_parser.parse(1, file_bytes)
 
@@ -54,9 +52,7 @@ def test_python_fixture_file_parses_symbols_imports_and_references(
     fake_class = index_symbols(symbols)["FakeClass"]
     assert fake_class["docstring"]
     assert "Fake Class Milti Line Docstring" in fake_class["docstring"]
-    assert (
-        "This is a fake class with a multi line docstring." in fake_class["docstring"]
-    )
+    assert "This is a fake class with a multi line docstring." in fake_class["docstring"]
     assert fake_fn["docstring"]
     assert "Fake Function Docstring" in fake_fn["docstring"]
 
@@ -74,9 +70,7 @@ def test_python_fixture_file_parses_symbols_imports_and_references(
 def test_python_module_qn_prefixes_root_symbols(python_parser, fixture_bytes):
     """When module_qn is set, root symbols are prefixed; nested keep parent chain."""
     file_bytes = fixture_bytes("file.py")
-    symbols, _imports, _references = python_parser.parse(
-        1, file_bytes, module_qn="pkg.mod"
-    )
+    symbols, _imports, _references = python_parser.parse(1, file_bytes, module_qn="pkg.mod")
 
     assert_symbols_invariants(symbols)
     qn = {symbol_key(s) for s in symbols}
@@ -102,9 +96,7 @@ def test_python_module_qn_prefixes_root_symbols(python_parser, fixture_bytes):
     assert by_qn["pkg.mod.FakeClass"]["name"] == "FakeClass"
 
 
-def test_python_fixture_another_file_has_fakeclass_call_reference(
-    python_parser, fixture_bytes
-):
+def test_python_fixture_another_file_has_fakeclass_call_reference(python_parser, fixture_bytes):
     file_bytes = fixture_bytes("another_file.py")
     symbols, imports, references = python_parser.parse(2, file_bytes)
 
@@ -118,10 +110,7 @@ def test_python_fixture_another_file_has_fakeclass_call_reference(
     by_qn = index_symbols(symbols)
 
     # Should contain a call reference to FakeClass()
-    assert any(
-        r["ref_kind"] == "call" and "FakeClass" in r["ref_symbol_name"]
-        for r in references
-    )
+    assert any(r["ref_kind"] == "call" and "FakeClass" in r["ref_symbol_name"] for r in references)
 
     # Base classes extracted as resolved qualified names
     assert "AnotherClass" in by_qn

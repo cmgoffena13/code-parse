@@ -43,12 +43,8 @@ def test_find_importers_accepts_absolute_path(tmp_path: Path) -> None:
     pkg = tmp_path / "pkg"
     pkg.mkdir()
     (pkg / "__init__.py").write_text("", encoding="utf-8")
-    (pkg / "target.py").write_text(
-        "def helper() -> int:\n    return 1\n", encoding="utf-8"
-    )
-    (pkg / "importer.py").write_text(
-        "from pkg.target import helper\n", encoding="utf-8"
-    )
+    (pkg / "target.py").write_text("def helper() -> int:\n    return 1\n", encoding="utf-8")
+    (pkg / "importer.py").write_text("from pkg.target import helper\n", encoding="utf-8")
     db = CodeDB(tmp_path)
     CodeProcessor(db, tmp_path).process()
     try:

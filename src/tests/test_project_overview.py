@@ -78,9 +78,7 @@ def test_project_overview_directories_and_entry_points(indexed_project: Path) ->
     assert out.count("pkg/main.py") == 1
     assert out.count("pkg/cli.py") == 1
     assert any(
-        line.startswith("  • pkg/cli.py (")
-        and "L" in line
-        and line.rstrip().endswith("S)")
+        line.startswith("  • pkg/cli.py (") and "L" in line and line.rstrip().endswith("S)")
         for line in out.splitlines()
     )
     assert "tests/main.py" not in out

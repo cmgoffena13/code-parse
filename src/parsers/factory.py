@@ -31,11 +31,13 @@ class ParserFactory:
     ):
         if language not in cls.tree_sitter_parsers:
             raise ValueError(
-                f"Unsupported Language: {language}; Supported Languages: {', '.join(cls.tree_sitter_parsers.keys())}"
+                f"Unsupported Language: {language}; Supported Languages: "
+                f"{', '.join(cls.tree_sitter_parsers.keys())}"
             )
         if language not in cls.parsers:
             raise ValueError(
-                f"Unsupported Language: {language}; Supported Languages: {', '.join(cls.parsers.keys())}"
+                f"Unsupported Language: {language}; Supported Languages: "
+                f"{', '.join(cls.parsers.keys())}"
             )
         if language not in cls.active_tree_sitter_parsers:
             cls.active_tree_sitter_parsers[language] = cls.tree_sitter_parsers[language]
